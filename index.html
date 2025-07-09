@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1280, initial-scale=1.0">
+    <title>HishoAI Enhanced - 完全版</title>
+    
+    <!-- 既存デスクトップ専用スタイルシート（順序重要：ベース→機能→専用） -->
+    <link rel="stylesheet" href="desktop-base.css">
+    <link rel="stylesheet" href="desktop-chat.css">
+    <link rel="stylesheet" href="desktop-features.css">
+    <link rel="stylesheet" href="office.css">
+    <link rel="stylesheet" href="translation.css">
+    <link rel="stylesheet" href="correction.css">
+    <link rel="stylesheet" href="transcript.css">
+    <link rel="stylesheet" href="analysis.css">
+    
+    <!-- ★新機能：資料調査AI専用スタイルシート -->
+    <link rel="stylesheet" href="summary.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- サイドバー（既存機能完全保持） -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🤖</div>
+                    <div>
+                        <div class="logo-text">HishoAI</div>
+                        <div class="logo-subtitle">Enhanced 完全版</div>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="nav-section">
+                <div class="nav-item active" data-tab="chat">
+                    <span class="nav-icon">💬</span>
+                    <span class="nav-text">チャット</span>
+                </div>
+                <div class="nav-item" data-tab="office">
+                    <span class="nav-icon">💼</span>
+                    <span class="nav-text">Office支援</span>
+                </div>
+                <div class="nav-item" data-tab="transcript">
+                    <span class="nav-icon">🎵</span>
+                    <span class="nav-text">音声文字起こし</span>
+                </div>
+                <div class="nav-item" data-tab="correction">
+                    <span class="nav-icon">✏️</span>
+                    <span class="nav-text">校正AI</span>
+                </div>
+                <div class="nav-item" data-tab="translate">
+                    <span class="nav-icon">🌍</span>
+                    <span class="nav-text">翻訳</span>
+                </div>
+                <!-- ★既存の要約を資料調査AIに置き換え -->
+                <div class="nav-item" data-tab="summary">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-text">資料調査AI</span>
+                </div>
+                <div class="nav-item" data-tab="analysis">
+                    <span class="nav-icon">📸</span>
+                    <span class="nav-text">スクショ解析</span>
+                </div>
+                
+                <div class="nav-divider"></div>
+                
+                <div class="nav-item" onclick="toggleHistoryPanel()">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">履歴</span>
+                </div>
+                <div class="nav-item" onclick="showExportMenu(event)">
+                    <span class="nav-icon">💾</span>
+                    <span class="nav-text">エクスポート</span>
+                </div>
+            </nav>
+            
+            <div class="api-status-section">
+                <div class="api-status disconnected" id="apiSettingsBtn" onclick="showApiSettings()">
+                    <div id="apiKeyStatus">❌ API未設定</div>
+                    <span>⚙️</span>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- メインコンテンツ（既存機能完全保持） -->
+        <main class="main-container">
+            <!-- トップバー（既存機能完全保持） -->
+            <header class="topbar">
+                <h1 class="page-title">チャット</h1>
+                <div class="topbar-actions">
+                    <div id="topbarActions">
+                        <!-- 動的に更新される -->
+                    </div>
+                </div>
+            </header>
+            
+            <!-- コンテンツエリア（既存機能完全保持） -->
+            <div class="content-area">
+                <div class="content-wrapper">
+                    <!-- 既存：チャットセクション -->
+                    <section id="chatSection" class="content-section active">
+                        <div class="chat-interface">
+                            <div class="chat-main">
+                                <div class="chat-header">
+                                    <div class="chat-header-info">
+                                        <h2>AIチャット</h2>
+                                        <p>モードを切り替えて最適な応答スタイルを選択</p>
+                                    </div>
+                                    <div class="chat-header-top">
+                                        <div class="chat-mode-selector">
+                                            <!-- モードタブはJavaScriptで動的に生成 -->
+                                        </div>
+                                        <div class="chat-header-actions">
+                                            <button class="chat-header-btn" onclick="showChatStats()">
+                                                📊 <span>統計</span>
+                                            </button>
+                                            <button class="chat-header-btn" onclick="clearChat()">
+                                                🗑️ <span>クリア</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- モード情報カード -->
+                                <div class="mode-info-card">
+                                    <!-- 内容はJavaScriptで動的に更新 -->
+                                </div>
+                                
+                                <!-- メッセージエリア -->
+                                <div class="chat-messages" id="chatMessages">
+                                    <div class="chat-welcome">
+                                        <div class="welcome-icon">🤖</div>
+                                        <h3>HishoAI へようこそ！</h3>
+                                        <p>何でもお気軽にご質問ください。モードを切り替えることで、最適な応答スタイルを選べます。</p>
+                                        <p style="color: var(--primary); font-size: var(--text-sm); margin-top: 0.5rem;">💡 ヒント: Enterキーで送信、Shift+Enterで改行</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- サンプルセクション -->
+                                <div class="chat-samples-section">
+                                    <div class="samples-header">
+                                        <div class="samples-title">💡 こんな質問を試してみよう</div>
+                                    </div>
+                                    <div class="chat-samples-grid">
+                                        <!-- サンプルカードはJavaScriptで動的に生成 -->
+                                    </div>
+                                </div>
+                                
+                                <!-- 入力エリア -->
+                                <div class="chat-input-area">
+                                    <div class="chat-input-wrapper">
+                                        <textarea 
+                                            id="chatInput" 
+                                            class="chat-input" 
+                                            placeholder="メッセージを入力... (Enterで送信)"
+                                            rows="1"
+                                        ></textarea>
+                                        <div class="chat-input-actions">
+                                            <button class="input-action-btn send-btn" onclick="sendChatMessage()" id="sendBtn" title="送信 (Enter)">
+                                                <span class="send-icon">📤</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 既存：Office支援セクション -->
+                    <section id="officeSection" class="content-section">
+                        <div class="office-interface">
+                            <div class="office-main">
+                                <div class="office-header">
+                                    <div class="office-header-info">
+                                        <h2>Office支援</h2>
+                                        <p>Word、Excel、PowerPointの操作をAIがサポート</p>
+                                    </div>
+                                    <div class="office-header-top">
+                                        <div class="office-mode-selector" role="tablist" aria-label="Officeアプリケーション選択">
+                                            <button class="office-tab active" role="tab" aria-selected="true" aria-controls="word-panel" data-office-mode="word">
+                                                <span class="office-tab-icon">📝</span>
+                                                <span class="office-tab-name">Word</span>
+                                            </button>
+                                            <button class="office-tab" role="tab" aria-selected="false" aria-controls="excel-panel" data-office-mode="excel">
+                                                <span class="office-tab-icon">📊</span>
+                                                <span class="office-tab-name">Excel</span>
+                                            </button>
+                                            <button class="office-tab" role="tab" aria-selected="false" aria-controls="powerpoint-panel" data-office-mode="powerpoint">
+                                                <span class="office-tab-icon">📑</span>
+                                                <span class="office-tab-name">PowerPoint</span>
+                                            </button>
+                                        </div>
+                                        <div class="office-header-actions">
+                                            <button class="office-header-btn" onclick="clearOfficeChat()">
+                                                🗑️ <span>クリア</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Office メッセージエリア -->
+                                <div class="office-messages" id="officeMessages">
+                                    <div class="office-welcome">
+                                        <div class="welcome-icon">💼</div>
+                                        <h3>Office支援へようこそ！</h3>
+                                        <p>上部のタブでWord、Excel、PowerPointを切り替えて、各アプリケーションに特化したサポートを受けられます。</p>
+                                    </div>
+                                </div>
+
+                                <!-- Office タブパネル -->
+                                <div class="office-tab-panels">
+                                    <!-- Word パネル -->
+                                    <div id="word-panel" class="office-panel active" role="tabpanel" aria-labelledby="word-tab">
+                                        <div class="sample-toggle-section">
+                                            <button class="sample-toggle-btn" onclick="toggleOfficeSample('word')" id="wordSampleToggle">
+                                                <span>📄</span>
+                                                <span>サンプル文書を見る</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="office-sample-card" id="wordSampleCard">
+                                            <div class="sample-header">
+                                                <h4>📄 サンプル文書</h4>
+                                                <span class="sample-badge">Word</span>
+                                            </div>
+                                            <div class="sample-preview">
+                                                <div class="sample-thumbnail word-thumb">
+                                                    <div class="doc-icon">📝</div>
+                                                    <div class="doc-lines">
+                                                        <div class="line"></div>
+                                                        <div class="line short"></div>
+                                                        <div class="line"></div>
+                                                        <div class="line medium"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="sample-info">
+                                                    <h5>年次報告書2024.docx</h5>
+                                                    <p>最終更新: 2024/12/20</p>
+                                                    <div class="sample-actions">
+                                                        <button class="sample-action-btn" onclick="loadWordSample()">
+                                                            <span>🔍</span> このファイルについて質問
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Excel パネル -->
+                                    <div id="excel-panel" class="office-panel" role="tabpanel" aria-labelledby="excel-tab">
+                                        <div class="sample-toggle-section">
+                                            <button class="sample-toggle-btn" onclick="toggleOfficeSample('excel')" id="excelSampleToggle">
+                                                <span>📊</span>
+                                                <span>サンプルスプレッドシートを見る</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="office-sample-card" id="excelSampleCard">
+                                            <div class="sample-header">
+                                                <h4>📊 サンプルスプレッドシート</h4>
+                                                <span class="sample-badge excel">Excel</span>
+                                            </div>
+                                            <div class="sample-preview">
+                                                <div class="sample-thumbnail excel-thumb">
+                                                    <div class="sheet-grid">
+                                                        <div class="grid-header">
+                                                            <div class="cell header">A</div>
+                                                            <div class="cell header">B</div>
+                                                            <div class="cell header">C</div>
+                                                        </div>
+                                                        <div class="grid-row">
+                                                            <div class="cell">売上</div>
+                                                            <div class="cell">1月</div>
+                                                            <div class="cell">¥100,000</div>
+                                                        </div>
+                                                        <div class="grid-row">
+                                                            <div class="cell">経費</div>
+                                                            <div class="cell">2月</div>
+                                                            <div class="cell">¥80,000</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="sample-info">
+                                                    <h5>月次売上集計.xlsx</h5>
+                                                    <p>最終更新: 2024/12/22</p>
+                                                    <div class="sample-actions">
+                                                        <button class="sample-action-btn" onclick="loadExcelSample()">
+                                                            <span>🔍</span> このファイルについて質問
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- PowerPoint パネル -->
+                                    <div id="powerpoint-panel" class="office-panel" role="tabpanel" aria-labelledby="powerpoint-tab">
+                                        <div class="sample-toggle-section">
+                                            <button class="sample-toggle-btn" onclick="toggleOfficeSample('powerpoint')" id="powerpointSampleToggle">
+                                                <span>📑</span>
+                                                <span>サンプルプレゼンテーションを見る</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="office-sample-card" id="powerpointSampleCard">
+                                            <div class="sample-header">
+                                                <h4>🎯 サンプルプレゼンテーション</h4>
+                                                <span class="sample-badge powerpoint">PowerPoint</span>
+                                            </div>
+                                            <div class="sample-preview">
+                                                <div class="sample-thumbnail ppt-thumb">
+                                                    <div class="slide-preview">
+                                                        <div class="slide-title">新製品発表</div>
+                                                        <div class="slide-content">
+                                                            <div class="bullet">• 革新的な機能</div>
+                                                            <div class="bullet">• 市場分析</div>
+                                                            <div class="bullet">• 今後の展開</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="sample-info">
+                                                    <h5>製品発表会.pptx</h5>
+                                                    <p>最終更新: 2024/12/21</p>
+                                                    <div class="sample-actions">
+                                                        <button class="sample-action-btn" onclick="loadPowerPointSample()">
+                                                            <span>🔍</span> このファイルについて質問
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 貼り付けエリア -->
+                                <div class="office-paste-area-container">
+                                    <div class="office-paste-area compact" id="officePasteArea">
+                                        <div class="paste-icon">📷</div>
+                                        <div class="paste-text">
+                                            <strong>Ctrl+V でスクリーンショットを貼り付け</strong>
+                                            <p>Office画面のスクリーンショットを貼り付けて、具体的な操作方法を質問できます</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="officeImagePreviewArea" class="office-image-preview-area" style="display: none;">
+                                        <div class="preview-header">
+                                            <h4>📸 貼り付けされた画像</h4>
+                                            <button class="remove-image-btn" onclick="removeOfficePreviewImage()">🗑️ 削除</button>
+                                        </div>
+                                        <div class="preview-image-container">
+                                            <img id="officePreviewImg" alt="プレビュー画像">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Office応答モード切り替え -->
+                                <div class="office-response-modes">
+                                    <button class="office-mode-btn active" data-response-mode="step" onclick="setOfficeResponseMode('step')">
+                                        📝 手順説明
+                                    </button>
+                                    <button class="office-mode-btn" data-response-mode="simple" onclick="setOfficeResponseMode('simple')">
+                                        ⚡ かんたん説明
+                                    </button>
+                                </div>
+
+                                <!-- Office入力エリア -->
+                                <div class="office-input-area">
+                                    <div class="office-input-wrapper">
+                                        <textarea 
+                                            id="officeInput" 
+                                            class="office-input" 
+                                            placeholder="Officeアプリケーションについて質問してください... (Enterで送信)"
+                                            rows="1"
+                                        ></textarea>
+                                        <div class="office-input-actions">
+                                            <button class="input-action-btn send-btn" onclick="sendOfficeMessage()" id="officeSendBtn" title="送信 (Enter)">
+                                                <span class="send-icon">📤</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 既存：音声文字起こしセクション -->
+                    <section id="transcriptSection" class="content-section">
+                        <!-- JavaScriptで動的レンダリングされるコンテナ -->
+                        <div class="transcript-container">
+                            <!-- IntegratedTranscriptUI.render() により動的生成される内容 -->
+                        </div>
+                    </section>
+
+                    <!-- 既存：校正AIセクション -->
+                    <section id="correctionSection" class="content-section">
+                        <div class="correction-container feature-container">
+                            <div class="feature-header">
+                                <div class="feature-title">
+                                    <div class="feature-icon-large">✏️</div>
+                                    <div>進化版校正AI機能</div>
+                                </div>
+                                <p class="feature-description">テキストを選択して校正方針を指定。校正前後を左右比較し、変更箇所を赤字強調表示します。</p>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="correctionInput" class="form-label">校正したいテキスト:</label>
+                                <textarea 
+                                    id="correctionInput" 
+                                    class="form-textarea" 
+                                    placeholder="校正したい文章を入力してください...&#10;&#10;💡 使い方:&#10;1. テキストを入力&#10;2. 校正したい部分を選択（全文の場合は選択不要）&#10;3. 校正方針を入力&#10;4. 校正ボタンをクリック"
+                                    rows="8"
+                                ></textarea>
+                            </div>
+                            
+                            <!-- 校正インターフェースはJavaScriptで動的に生成される -->
+                        </div>
+                    </section>
+
+                    <!-- 既存：翻訳セクション -->
+                    <section id="translateSection" class="content-section">
+                        <div class="translate-container feature-container">
+                            <div class="feature-header">
+                                <div class="feature-title">
+                                    <div class="feature-icon-large">🌍</div>
+                                    <div>AI翻訳機能</div>
+                                </div>
+                                <p class="feature-description">テキストを瞬時に多言語翻訳します。ビジネス、学習、旅行に最適です。</p>
+                            </div>
+                            
+                            <!-- リアルタイム翻訳の説明 -->
+                            <div class="realtime-help">
+                                <h4>⚡ スーパーリアルタイム翻訳</h4>
+                                <ul>
+                                    <li><strong>右クリック</strong>または<strong>ダブルクリック</strong>で翻訳ボタンを押すとリアルタイム翻訳モードになります</li>
+                                    <li>入力中に自動で翻訳が更新されます</li>
+                                    <li>⏹️ボタンまたは再度右クリックで停止できます</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="translateInput" class="form-label">翻訳したいテキスト:</label>
+                                <textarea 
+                                    id="translateInput" 
+                                    class="form-textarea" 
+                                    placeholder="翻訳したいテキストを入力してください..."
+                                    rows="6"
+                                ></textarea>
+                            </div>
+                            
+                            <div class="button-group" id="translateButtons">
+                                <button class="btn btn-primary translate-btn" data-lang="en" id="translateToEn" title="クリック：通常翻訳 | 右クリック/ダブルクリック：リアルタイム翻訳">
+                                    🇺🇸 英語に翻訳
+                                </button>
+                                <button class="btn btn-primary translate-btn" data-lang="zh" id="translateToZh" title="クリック：通常翻訳 | 右クリック/ダブルクリック：リアルタイム翻訳">
+                                    🇨🇳 中国語に翻訳
+                                </button>
+                                <button class="btn btn-primary translate-btn" data-lang="ko" id="translateToKo" title="クリック：通常翻訳 | 右クリック/ダブルクリック：リアルタイム翻訳">
+                                    🇰🇷 韓国語に翻訳
+                                </button>
+                                <button class="btn btn-primary translate-btn" data-lang="ja" id="translateToJa" title="クリック：通常翻訳 | 右クリック/ダブルクリック：リアルタイム翻訳">
+                                    🇯🇵 日本語に翻訳
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ★新機能：資料調査AIセクション（既存の要約セクションを置き換え） -->
+                    <section id="summarySection" class="content-section">
+                        <!-- 
+                        ★重要：このセクションの内容はsummary.jsのenterSummaryMode()で
+                        動的に3カラムレイアウトに置き換えられます 
+                        -->
+                        <div class="summary-placeholder">
+                            <div class="feature-container">
+                                <div class="feature-header">
+                                    <div class="feature-title">
+                                        <div class="feature-icon-large">🔍</div>
+                                        <div>資料調査AI機能</div>
+                                    </div>
+                                    <p class="feature-description">複数の資料（PDF, DOCX, TXT, MD）をアップロードして、AIが横断的に分析・要約します。</p>
+                                </div>
+                                
+                                <div style="text-align: center; padding: 3rem;">
+                                    <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+                                    <h3>資料調査AIを起動中...</h3>
+                                    <p>左側のナビゲーションから「資料調査AI」をクリックして開始してください。</p>
+                                    <button class="btn btn-primary" onclick="enterSummaryMode()" style="margin-top: 1rem;">
+                                        🔍 資料調査AIを開始
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 既存：スクショ解析セクション -->
+                    <section id="analysisSection" class="content-section">
+                        <div class="analysis-container feature-container">
+                            <div class="feature-header">
+                                <div class="feature-title">
+                                    <div class="feature-icon-large">🔍</div>
+                                    <div>スクリーンショット解析</div>
+                                </div>
+                                <p class="feature-description">画面の問題を分析し、具体的な解決策を提案します。</p>
+                            </div>
+                            
+                            <div class="file-upload-area" id="imageDropZone">
+                                <div class="upload-icon">📸</div>
+                                <div class="upload-text">
+                                    <strong>スクリーンショット画像をドロップまたは選択</strong>
+                                    <p>PNG, JPG, JPEG, GIF, WebP形式に対応（最大20MB）</p>
+                                    <p>エラー画面、ソフトウェア画面、コード画面等を解析します</p>
+                                </div>
+                                <input type="file" id="imageFileInput" accept="image/*" class="file-input-hidden">
+                            </div>
+                            
+                            <div id="imageFileInfo" class="file-info" style="display: none;">
+                                <div class="file-details">
+                                    <div class="file-name"></div>
+                                    <div class="file-size"></div>
+                                </div>
+                                <button class="remove-file-btn" onclick="removeImageFile()">🗑️ 削除</button>
+                            </div>
+                            
+                            <div id="imagePreview" class="image-preview-area" style="display: none;">
+                                <h4>📸 プレビュー</h4>
+                                <img id="previewImage" alt="プレビュー画像">
+                            </div>
+                            
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="analyzeImageBtn" onclick="analyzeImage()" disabled>
+                                    🔍 画像解析開始
+                                </button>
+                                <button class="btn btn-secondary" id="ocrBtn" onclick="extractTextFromImage()" disabled>
+                                    📝 テキスト抽出（OCR）
+                                </button>
+                                <button class="btn btn-ghost" onclick="showAnalysisSample('general')">
+                                    📄 サンプル表示
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 既存：履歴パネル -->
+    <div class="history-panel" id="historyPanel" style="display: none;">
+        <div class="history-header">
+            <h3>📋 履歴</h3>
+            <button class="history-close-btn" onclick="toggleHistoryPanel()">×</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+    </div>
+
+    <!-- 既存：エクスポートメニュー -->
+    <div class="export-menu" id="exportMenu" style="display: none;">
+        <div class="export-option" onclick="exportResults('json')">
+            <span class="export-icon">📄</span>
+            <span>JSON形式でエクスポート</span>
+        </div>
+        <div class="export-option" onclick="exportResults('csv')">
+            <span class="export-icon">📊</span>
+            <span>CSV形式でエクスポート</span>
+        </div>
+    </div>
+
+    <!-- 既存：API設定モーダル -->
+    <div class="modal-overlay" id="apiModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔑 APIキー設定</h2>
+                <button class="modal-close" onclick="closeApiModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="api-intro">
+                    <h3>🚀 HishoAI Enhanced へようこそ！</h3>
+                    <p>最高のAI体験のため、OpenAI APIキーを設定してください</p>
+                </div>
+                
+                <div class="api-warning card" style="background: #fef3c7; border: 1px solid #f59e0b; padding: 1rem; margin: 1rem 0;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="warning-icon">🔒</div>
+                        <div class="warning-content">
+                            <h4 style="margin: 0 0 0.5rem 0;">プライバシー保護</h4>
+                            <p style="margin: 0; font-size: var(--text-sm);">APIキーはお使いのブラウザにのみ保存され、外部に送信されることはありません。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form class="api-form" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="openaiApiKey" class="form-label">OpenAI APIキー</label>
+                        <input 
+                            type="password" 
+                            id="openaiApiKey" 
+                            class="form-input" 
+                            placeholder="sk-..." 
+                            autocomplete="off"
+                        >
+                        <div class="form-help" style="font-size: var(--text-sm); color: var(--gray-600); margin-top: 0.5rem;">
+                            OpenAIアカウントの<a href="https://platform.openai.com/api-keys" target="_blank">API Keys</a>ページで取得できます
+                        </div>
+                    </div>
+                    
+                    <div class="button-row" style="margin-top: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="testApiKey()" id="testBtn">
+                            🔍 接続テスト
+                        </button>
+                    </div>
+                    
+                    <div id="apiStatus" class="api-status" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: var(--radius-md);"></div>
+                </form>
+                
+                <div class="offline-notice card" style="background: #e0e7ff; border: 1px solid #6366f1; padding: 1rem; margin-top: 1rem;">
+                    <h4 style="margin: 0 0 0.5rem 0;">📱 オフラインモードについて</h4>
+                    <p style="margin: 0; font-size: var(--text-sm);">APIキーなしでも基本機能（サンプル翻訳・Office支援など）をお試しいただけます</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="skipApiSetup()">⏭️ 後で設定</button>
+                <button class="btn btn-primary" onclick="saveApiKey()" id="saveBtn" disabled>✅ 保存して開始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 既存JavaScript読み込み（順序重要：設定→コア→機能） -->
+    <script src="config.js"></script>
+    <script src="core.js"></script>
+    <script src="chat.js"></script>
+    <script src="office.js"></script>
+    <script src="transcript.js"></script>
+    <script src="correction.js"></script>
+    <script src="translation.js"></script>
+    <script src="analysis.js"></script>
+    
+    <!-- ★新機能：資料調査AI専用JavaScript -->
+    <script src="summary.js"></script>
+    
+    <!-- 既存：Officeサンプル表示制御（既存機能保持） -->
+    <script>
+        if (typeof window.officeSampleStates === 'undefined') {
+            window.officeSampleStates = {
+                word: false,
+                excel: false,
+                powerpoint: false
+            };
+        }
+        
+        window.toggleOfficeSample = function(mode) {
+            if (!['word', 'excel', 'powerpoint'].includes(mode)) {
+                console.error('Invalid office mode:', mode);
+                return;
+            }
+            
+            try {
+                const sampleCard = document.getElementById(`${mode}SampleCard`);
+                const toggleBtn = document.getElementById(`${mode}SampleToggle`);
+                
+                if (!sampleCard || !toggleBtn) {
+                    console.error('Required elements not found for mode:', mode);
+                    return;
+                }
+                
+                const isCurrentlyVisible = window.officeSampleStates[mode];
+                window.officeSampleStates[mode] = !isCurrentlyVisible;
+                
+                if (window.officeSampleStates[mode]) {
+                    sampleCard.style.display = 'block';
+                    toggleBtn.querySelector('span:last-child').textContent = 
+                        mode === 'word' ? 'サンプル文書を隠す' :
+                        mode === 'excel' ? 'サンプルスプレッドシートを隠す' :
+                        'サンプルプレゼンテーションを隠す';
+                } else {
+                    sampleCard.style.display = 'none';
+                    toggleBtn.querySelector('span:last-child').textContent = 
+                        mode === 'word' ? 'サンプル文書を見る' :
+                        mode === 'excel' ? 'サンプルスプレッドシートを見る' :
+                        'サンプルプレゼンテーションを見る';
+                }
+                
+                try {
+                    localStorage.setItem('hishoai_office_sample_states', JSON.stringify(window.officeSampleStates));
+                } catch (e) {
+                    console.warn('ローカルストレージへの保存に失敗:', e);
+                }
+                
+            } catch (error) {
+                console.error('サンプル表示切替エラー:', error);
+            }
+        };
+    </script>
+    
+    <!-- 既存：初期化スクリプト（既存機能保持） -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 HishoAI Enhanced Desktop starting...');
+            
+            if (typeof window.DEFAULT_MODEL === 'undefined') {
+                console.error('❌ Config not loaded properly');
+                return;
+            }
+            
+            // 既存システムの初期化
+            if (typeof initializeApp !== 'undefined') {
+                initializeApp();
+            }
+            
+            initializeDesktopUI();
+            
+            console.log('✅ HishoAI Enhanced Desktop 初期化完了');
+            console.log('🔍 資料調査AI機能も利用可能です');
+        });
+        
+        function initializeDesktopUI() {
+            updateTopbarActions();
+            setupSidebarNavigation();
+        }
+        
+        // ★既存のswitchTab関数に資料調査AI終了処理を追加
+        const originalSwitchTab = window.switchTab;
+        window.switchTab = function(tabName) {
+            // ★資料調査AIが開いている場合は終了
+            if (tabName !== 'summary' && window.SummaryAI && window.SummaryAI.initialized) {
+                const summarySection = document.getElementById('summarySection');
+                if (summarySection && summarySection.querySelector('.summary-app-container')) {
+                    window.SummaryAI.exitSummaryMode();
+                }
+            }
+            
+            // 既存のswitchTab処理を続行
+            if (originalSwitchTab) {
+                originalSwitchTab(tabName);
+            }
+        };
+        
+        function setupSidebarNavigation() {
+            document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+                item.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    if (tabName) {
+                        // ★資料調査AIの場合は特別処理
+                        if (tabName === 'summary') {
+                            enterSummaryMode();
+                            return;
+                        }
+                        
+                        // ★他のタブに切り替える時は資料調査AIモードを終了
+                        if (window.SummaryAI && window.SummaryAI.initialized) {
+                            // 現在資料調査AIが表示中の場合は終了
+                            const summarySection = document.getElementById('summarySection');
+                            if (summarySection && summarySection.querySelector('.summary-app-container')) {
+                                window.SummaryAI.exitSummaryMode();
+                            }
+                        }
+                        
+                        // 既存のタブ切り替え処理
+                        switchTab(tabName);
+                        
+                        document.querySelectorAll('.nav-item').forEach(nav => {
+                            nav.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        
+                        const pageTitle = document.querySelector('.page-title');
+                        if (pageTitle) {
+                            const navText = this.querySelector('.nav-text').textContent;
+                            pageTitle.textContent = navText;
+                        }
+                        
+                        updateTopbarActions();
+                    }
+                });
+            });
+        }
+        
+        // ★新機能：要約セクションに戻るボタン用の関数
+        window.returnToSummaryPlaceholder = function() {
+            const summarySection = document.getElementById('summarySection');
+            if (summarySection) {
+                summarySection.innerHTML = `
+                    <div class="summary-placeholder">
+                        <div class="feature-container">
+                            <div class="feature-header">
+                                <div class="feature-title">
+                                    <div class="feature-icon-large">🔍</div>
+                                    <div>資料調査AI機能</div>
+                                </div>
+                                <p class="feature-description">複数の資料（PDF, DOCX, TXT, MD）をアップロードして、AIが横断的に分析・要約します。</p>
+                            </div>
+                            
+                            <div style="text-align: center; padding: 3rem;">
+                                <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+                                <h3>資料調査AIを起動中...</h3>
+                                <p>左側のナビゲーションから「資料調査AI」をクリックして開始してください。</p>
+                                <button class="btn btn-primary" onclick="enterSummaryMode()" style="margin-top: 1rem;">
+                                    🔍 資料調査AIを開始
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>

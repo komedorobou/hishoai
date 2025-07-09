@@ -1,0 +1,1107 @@
+/* ===================================================================
+   HishoAI Enhanced - 翻訳機能専用スタイルシート（リアルタイム翻訳完全対応版）
+   シンプルな多言語翻訳機能 - 完全レスポンシブ対応版
+   =================================================================== */
+
+/* ===== 翻訳セクション基本レイアウト ===== */
+#translateSection {
+    animation: fadeIn 0.3s ease;
+}
+
+.translate-intro {
+    background: linear-gradient(135deg, #fd79a8, #fdcb6e);
+}
+
+/* ===== 翻訳入力エリア ===== */
+.translation-input-area {
+    background: #f7fafc;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+@media (max-width: 1024px) {
+    .translation-input-area {
+        padding: 1.5rem;
+        border-radius: 1.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .translation-input-area {
+        padding: 1.25rem;
+        margin: 1rem 0;
+        border-radius: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .translation-input-area {
+        padding: 1rem;
+        margin: 0.75rem 0;
+        border-radius: 0.75rem;
+        border-width: 1px;
+    }
+}
+
+.translation-input-area:focus-within {
+    border-color: #fd79a8;
+    box-shadow: 0 0 0 3px rgba(253, 121, 168, 0.1);
+    background: white;
+}
+
+.translation-textarea {
+    min-height: 150px;
+    font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+    line-height: 1.7;
+    font-size: 1.1rem;
+    border: none;
+    background: transparent;
+    resize: vertical;
+    transition: all 0.2s ease;
+}
+
+@media (max-width: 1024px) {
+    .translation-textarea {
+        min-height: 140px;
+        font-size: 1.05rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .translation-textarea {
+        min-height: 120px;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+}
+
+@media (max-width: 480px) {
+    .translation-textarea {
+        min-height: 100px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+}
+
+.translation-textarea:focus {
+    outline: none;
+    background: rgba(253, 121, 168, 0.02);
+}
+
+/* 文字数カウンター */
+.character-counter {
+    position: absolute;
+    bottom: 1rem;
+    right: 1.5rem;
+    background: rgba(253, 121, 168, 0.1);
+    color: #fd79a8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .character-counter {
+        bottom: 0.75rem;
+        right: 1rem;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .character-counter {
+        position: static;
+        display: inline-block;
+        margin-top: 0.5rem;
+        font-size: 0.65rem;
+    }
+}
+
+/* ===== 言語選択ボタン（リアルタイム翻訳対応） ===== */
+.language-buttons,
+.button-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+    transition: all 0.5s ease;
+}
+
+@media (max-width: 1024px) {
+    .language-buttons,
+    .button-group {
+        gap: 0.875rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .language-buttons,
+    .button-group {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin: 1rem 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .language-buttons,
+    .button-group {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+    }
+}
+
+/* ===== リアルタイム翻訳時のボタン群非表示化 ===== */
+.button-group.realtime-minimized {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: auto;
+    max-width: 300px;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transform: scale(0.85);
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .button-group.realtime-minimized {
+        bottom: 15px;
+        right: 15px;
+        max-width: 250px;
+        padding: 0.75rem;
+        transform: scale(0.8);
+        opacity: 0.6;
+    }
+}
+
+@media (max-width: 480px) {
+    .button-group.realtime-minimized {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        padding: 0.5rem;
+        transform: scale(0.75);
+        opacity: 0.5;
+    }
+}
+
+.button-group.realtime-minimized:hover {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* 翻訳ボタン基本スタイル */
+.language-btn,
+.translate-btn {
+    background: white;
+    border: 2px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+}
+
+@media (max-width: 1024px) {
+    .language-btn,
+    .translate-btn {
+        padding: 0.875rem 1.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .language-btn,
+    .translate-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        gap: 0.5rem;
+        border-radius: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .language-btn,
+    .translate-btn {
+        padding: 0.625rem 0.875rem;
+        font-size: 0.85rem;
+        border-width: 1px;
+    }
+}
+
+/* リアルタイム翻訳時のボタンサイズ調整 */
+.button-group.realtime-minimized .language-btn,
+.button-group.realtime-minimized .translate-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    min-height: auto;
+}
+
+.button-group.realtime-minimized .language-btn .language-flag,
+.button-group.realtime-minimized .translate-btn .language-flag {
+    font-size: 1rem;
+}
+
+.button-group.realtime-minimized .language-btn .language-name,
+.button-group.realtime-minimized .translate-btn .language-name {
+    font-size: 0.75rem;
+}
+
+/* ホバーエフェクト */
+.language-btn::before,
+.translate-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+}
+
+.language-btn:hover::before,
+.translate-btn:hover::before {
+    left: 100%;
+}
+
+.language-btn:hover,
+.translate-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+@media (hover: none) {
+    .language-btn:hover,
+    .translate-btn:hover {
+        transform: none;
+    }
+}
+
+/* 言語別ボタンカラー */
+.language-btn.translate-en,
+.translate-btn[data-lang="en"] {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+}
+
+.language-btn.translate-en:hover,
+.translate-btn[data-lang="en"]:hover {
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+}
+
+.language-btn.translate-zh,
+.translate-btn[data-lang="zh"] {
+    border-color: #f44336;
+    background: linear-gradient(135deg, #f44336, #da190b);
+    color: white;
+}
+
+.language-btn.translate-zh:hover,
+.translate-btn[data-lang="zh"]:hover {
+    box-shadow: 0 8px 20px rgba(244, 67, 54, 0.3);
+}
+
+.language-btn.translate-ko,
+.translate-btn[data-lang="ko"] {
+    border-color: #2196F3;
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+}
+
+.language-btn.translate-ko:hover,
+.translate-btn[data-lang="ko"]:hover {
+    box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+}
+
+.language-btn.translate-ja,
+.translate-btn[data-lang="ja"] {
+    border-color: #FF9800;
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    color: white;
+}
+
+.language-btn.translate-ja:hover,
+.translate-btn[data-lang="ja"]:hover {
+    box-shadow: 0 8px 20px rgba(255, 152, 0, 0.3);
+}
+
+.language-flag {
+    font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .language-flag {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .language-flag {
+        font-size: 1.125rem;
+    }
+}
+
+.language-name {
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .language-name {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .language-name {
+        font-size: 0.8rem;
+    }
+}
+
+/* ===== リアルタイム翻訳アクティブ状態 ===== */
+.translate-btn.realtime-active,
+.language-btn.realtime-active {
+    background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+    color: white !important;
+    border-color: #0891b2 !important;
+    box-shadow: 0 0 20px rgba(8, 145, 178, 0.4) !important;
+    position: relative;
+    overflow: hidden;
+    animation: realtimePulse 2s infinite;
+}
+
+.translate-btn.realtime-active::after,
+.language-btn.realtime-active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes realtimePulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(8, 145, 178, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(8, 145, 178, 0.6);
+    }
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* リアルタイム翻訳ボタンのテキスト変更対応 */
+.translate-btn.realtime-active:hover,
+.language-btn.realtime-active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(8, 145, 178, 0.5) !important;
+}
+
+/* ===== リアルタイム翻訳結果表示 ===== */
+.realtime-result {
+    background: linear-gradient(135deg, #e0f2fe, #f0f9ff);
+    border: 2px solid #0891b2;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin: 1rem 0;
+    animation: slideInUp 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(8, 145, 178, 0.2);
+    min-height: 200px;
+}
+
+@media (max-width: 768px) {
+    .realtime-result {
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin: 0.75rem 0;
+        min-height: 160px;
+    }
+}
+
+@media (max-width: 480px) {
+    .realtime-result {
+        padding: 1.25rem;
+        border-radius: 0.625rem;
+        margin: 0.5rem 0;
+        min-height: 140px;
+    }
+}
+
+.realtime-result::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #0891b2, #06b6d4);
+    border-radius: 1rem 1rem 0 0;
+}
+
+.realtime-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+    .realtime-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+}
+
+.realtime-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0891b2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .realtime-title {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .realtime-title {
+        font-size: 0.85rem;
+    }
+}
+
+.realtime-stop-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+@media (max-width: 480px) {
+    .realtime-stop-btn {
+        align-self: flex-end;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+.realtime-stop-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+}
+
+.realtime-content {
+    position: relative;
+}
+
+.realtime-translated {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e0f2fe;
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: #1a202c;
+    min-height: 120px;
+    display: flex;
+    align-items: flex-start;
+    box-shadow: 0 2px 8px rgba(8, 145, 178, 0.1);
+    transition: all 0.2s ease;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+    .realtime-translated {
+        padding: 1.25rem;
+        font-size: 1.05rem;
+        min-height: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .realtime-translated {
+        padding: 1rem;
+        font-size: 1rem;
+        min-height: 80px;
+    }
+}
+
+.realtime-typing {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.75rem;
+    background: rgba(8, 145, 178, 0.1);
+    color: #0891b2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: none;
+    animation: pulse 1.5s infinite;
+}
+
+@media (max-width: 480px) {
+    .realtime-typing {
+        position: static;
+        margin-top: 0.5rem;
+        text-align: center;
+        font-size: 0.7rem;
+        display: block;
+    }
+}
+
+/* ===== 翻訳結果表示 ===== */
+.translation-result {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    animation: slideInUp 0.5s ease;
+    position: relative;
+}
+
+@media (max-width: 1024px) {
+    .translation-result {
+        padding: 1.5rem;
+        border-radius: 1.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .translation-result {
+        padding: 1.25rem;
+        margin: 1rem 0;
+        border-radius: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .translation-result {
+        padding: 1rem;
+        margin: 0.75rem 0;
+        border-radius: 0.75rem;
+    }
+}
+
+.translation-result::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #fd79a8, #fdcb6e);
+    border-radius: 1.5rem 1.5rem 0 0;
+}
+
+/* ===== 比較ビュー ===== */
+.translation-comparison,
+.comparison-view {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+@media (max-width: 768px) {
+    .translation-comparison,
+    .comparison-view {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+}
+
+.comparison-section {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .comparison-section {
+        padding: 1rem;
+        border-radius: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .comparison-section {
+        padding: 0.75rem;
+    }
+}
+
+.comparison-section.original {
+    border-left: 4px solid #64748b;
+}
+
+.comparison-section.translated {
+    border-left: 4px solid #fd79a8;
+}
+
+@media (max-width: 768px) {
+    .comparison-section.original,
+    .comparison-section.translated {
+        border-left-width: 3px;
+    }
+}
+
+.comparison-section h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a202c;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .comparison-section h4 {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .comparison-section h4 {
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
+.text-content {
+    line-height: 1.7;
+    font-size: 1rem;
+    color: #1a202c;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+    .text-content {
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+}
+
+@media (max-width: 480px) {
+    .text-content {
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+}
+
+/* RTL言語サポート */
+.text-content[dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+}
+
+/* ===== 結果ヘッダー ===== */
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .result-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+    }
+}
+
+.result-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .result-title {
+        font-size: 1.125rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .result-title {
+        font-size: 1rem;
+    }
+}
+
+.result-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .result-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+}
+
+.copy-btn {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+@media (max-width: 480px) {
+    .copy-btn {
+        flex: 1;
+        justify-content: center;
+        font-size: 0.8rem;
+        padding: 0.375rem 0.75rem;
+    }
+}
+
+.copy-btn:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== リアルタイム翻訳の説明テキスト ===== */
+.realtime-help {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 1px solid #0891b2;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.875rem;
+    color: #0c4a6e;
+    box-shadow: 0 2px 8px rgba(8, 145, 178, 0.1);
+}
+
+@media (max-width: 768px) {
+    .realtime-help {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .realtime-help {
+        padding: 0.625rem;
+        font-size: 0.75rem;
+    }
+}
+
+.realtime-help h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #0891b2;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .realtime-help h4 {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .realtime-help h4 {
+        font-size: 0.85rem;
+    }
+}
+
+.realtime-help ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .realtime-help ul {
+        padding-left: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .realtime-help ul {
+        padding-left: 1rem;
+    }
+}
+
+.realtime-help li {
+    margin: 0.25rem 0;
+    line-height: 1.4;
+}
+
+.realtime-help li strong {
+    color: #0891b2;
+    font-weight: 600;
+}
+
+/* ===== アニメーション ===== */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.7;
+        transform: scale(0.95);
+    }
+}
+
+/* ===== 大画面向け最適化 ===== */
+@media (min-width: 1600px) {
+    .translation-result {
+        max-width: 1200px;
+        margin: 1.5rem auto;
+    }
+    
+    .language-buttons,
+    .button-group {
+        grid-template-columns: repeat(4, 1fr);
+        max-width: 1000px;
+        margin: 1.5rem auto;
+    }
+    
+    .realtime-result {
+        max-width: 1200px;
+        margin: 1rem auto;
+    }
+}
+
+/* ===== タブレット向け最適化 ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .translation-input-area {
+        padding: 1.75rem;
+    }
+    
+    .translation-result {
+        padding: 1.75rem;
+    }
+    
+    .realtime-result {
+        padding: 1.25rem;
+    }
+}
+
+/* ===== プリント対応 ===== */
+@media print {
+    .translation-result,
+    .realtime-result {
+        box-shadow: none;
+        border: 1px solid #e2e8f0;
+        page-break-inside: avoid;
+    }
+    
+    .language-buttons,
+    .button-group,
+    .result-actions,
+    .realtime-header,
+    .realtime-help {
+        display: none !important;
+    }
+    
+    .comparison-section {
+        page-break-inside: avoid;
+    }
+    
+    .text-content,
+    .realtime-translated {
+        white-space: pre-wrap;
+    }
+    
+    .realtime-result::before,
+    .translation-result::before {
+        display: none;
+    }
+}
+
+/* ===== アクセシビリティ強化 ===== */
+.translate-btn:focus,
+.language-btn:focus {
+    outline: 2px solid #0891b2;
+    outline-offset: 2px;
+}
+
+.translate-btn:focus-visible,
+.language-btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.3);
+}
+
+.realtime-stop-btn:focus {
+    outline: 2px solid #ef4444;
+    outline-offset: 2px;
+}
+
+/* ===== 高コントラストモード対応 ===== */
+@media (prefers-contrast: high) {
+    .translate-btn,
+    .language-btn {
+        border-width: 3px;
+    }
+    
+    .realtime-result {
+        border-width: 3px;
+    }
+    
+    .comparison-section.original,
+    .comparison-section.translated {
+        border-left-width: 6px;
+    }
+}
+
+/* ===== 動きを減らす設定への対応 ===== */
+@media (prefers-reduced-motion: reduce) {
+    .translate-btn,
+    .language-btn,
+    .realtime-result,
+    .translation-result,
+    .button-group {
+        animation: none;
+        transition: none;
+    }
+    
+    .translate-btn.realtime-active::after,
+    .language-btn.realtime-active::after {
+        animation: none;
+    }
+    
+    .translate-btn:hover,
+    .language-btn:hover {
+        transform: none;
+    }
+    
+    .button-group.realtime-minimized {
+        transition: opacity 0.3s ease;
+    }
+}
+
+/* ===== ダークモード無効化（ライトモード固定） ===== */
+.translation-result,
+.translation-input-area,
+.comparison-section,
+.copy-btn,
+.realtime-result,
+.realtime-translated {
+    background: white !important;
+    color: #1a202c !important;
+    border-color: #e2e8f0 !important;
+}
+
+.comparison-section {
+    background: #f8fafc !important;
+}
+
+.copy-btn {
+    background: #f7fafc !important;
+    color: #4a5568 !important;
+}
+
+.copy-btn:hover {
+    background: #edf2f7 !important;
+    border-color: #cbd5e0 !important;
+}
+
+.realtime-result {
+    background: linear-gradient(135deg, #e0f2fe, #f0f9ff) !important;
+}
+
+.realtime-help {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe) !important;
+}
