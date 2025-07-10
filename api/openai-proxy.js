@@ -25,7 +25,15 @@ export default async function handler(req, res) {
     // APIキーの検証
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('Missing or invalid authorization header');
       return res.status(401).json({ error: 'Authorization header required' });
+    }
+
+    // APIキーの基本形式チェック
+    const apiKey = authHeader.replace('Bearer ', '');
+    if (!apiKey.startsWith('sk-')) {
+      console.error('Invalid API key format');
+      return res.status(401).json({ error: 'Invalid API key format' });
     }
 
     // エンドポイントの決定
@@ -35,6 +43,9 @@ export default async function handler(req, res) {
     } else {
       apiUrl = 'https://api.openai.com/v1/chat/completions';
     }
+
+    console.log('Sending request to:', apiUrl);
+    console.log('Request data:', JSON.stringify(requestData, null, 2));
 
     // OpenAI APIへのリクエスト
     const openaiResponse = await fetch(apiUrl, {
@@ -47,7 +58,25 @@ export default async function handler(req, res) {
       body: JSON.stringify(requestData)
     });
 
-    const responseData = await openaiResponse.json();
+    console.log('OpenAI response status:', openaiResponse.status);
+    console.log('OpenAI response headers:', Object.fromEntries(openaiResponse.headers.entries()));
+
+    // レスポンステキストを取得
+    const responseText = await openaiResponse.text();
+    console.log('OpenAI response text:', responseText);
+
+    // JSONパースを試行
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Response text was:', responseText);
+      return res.status(500).json({ 
+        error: 'Invalid JSON response from OpenAI',
+        details: responseText.substring(0, 200) + '...'
+      });
+    }
 
     // OpenAI APIのレスポンスをそのまま返す
     res.status(openaiResponse.status).json(responseData);
