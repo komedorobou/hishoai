@@ -4,8 +4,8 @@
 // ===================================================================
 
 // ===== API エンドポイント定義 =====
-// Vercelプロキシエンドポイント（デプロイ後にURLを更新してください）
-const PROXY_ENDPOINT = 'https://your-vercel-app.vercel.app/api/openai-proxy';
+// Vercelプロキシエンドポイント
+const PROXY_ENDPOINT = 'https://hishoai.vercel.app/api/openai-proxy';
 const CHAT_ENDPOINT = PROXY_ENDPOINT;
 const RESPONSES_ENDPOINT = PROXY_ENDPOINT;
 
