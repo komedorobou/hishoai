@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
   try {
     // リクエストボディから必要な情報を取得
-    const { model, messages, temperature, max_tokens } = req.body;
+    const { endpoint = 'chat', model, messages, temperature, max_tokens } = req.body;
     
     // APIキーの検証
     const authHeader = req.headers.authorization;
@@ -37,13 +37,17 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid API key format' });
     }
 
-    // 常に標準のChat Completionsエンドポイントを使用
-    const apiUrl = 'https://api.openai.com/v1/chat/completions';
+    // endpoint に応じて URL を切り替え
+    const apiUrl = 
+      endpoint === 'responses' 
+        ? 'https://api.openai.com/v1/responses'
+        : 'https://api.openai.com/v1/chat/completions';
     
     // ヘッダーの設定
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Authorization': `Bearer ${apiKey}`,
+      'OpenAI-Beta': 'assist'
     };
 
     // リクエストボディの構築
@@ -60,6 +64,7 @@ export default async function handler(req, res) {
 
     console.log('Proxying request to OpenAI:', {
       url: apiUrl,
+      endpoint: endpoint,
       model: requestBody.model,
       messageCount: messages ? messages.length : 0
     });
