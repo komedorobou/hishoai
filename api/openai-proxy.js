@@ -20,6 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    // リクエストボディから必要な情報を取得
     const { model, messages, temperature, max_tokens } = req.body;
     
     // APIキーの検証
@@ -31,33 +32,37 @@ export default async function handler(req, res) {
 
     // APIキーの基本形式チェック
     const apiKey = authHeader.replace('Bearer ', '');
-    if (!apiKey.startsWith('sk-')) {
+    if (!apiKey || apiKey.length < 20) {
       console.error('Invalid API key format');
       return res.status(401).json({ error: 'Invalid API key format' });
     }
 
     // 常に標準のChat Completionsエンドポイントを使用
     const apiUrl = 'https://api.openai.com/v1/chat/completions';
+    
+    // ヘッダーの設定
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': authHeader
+      'Authorization': `Bearer ${apiKey}`
     };
 
     // リクエストボディの構築
     const requestBody = {
       model: model || 'gpt-4',
-      messages: messages,
-      temperature: temperature || 0.7
+      messages: messages || [],
+      temperature: temperature !== undefined ? temperature : 0.7
     };
 
     // max_tokensが指定されている場合のみ追加
-    if (max_tokens) {
+    if (max_tokens && max_tokens > 0) {
       requestBody.max_tokens = max_tokens;
     }
 
-    console.log('API URL:', apiUrl);
-    console.log('Request model:', requestBody.model);
-    console.log('Message count:', messages ? messages.length : 0);
+    console.log('Proxying request to OpenAI:', {
+      url: apiUrl,
+      model: requestBody.model,
+      messageCount: messages ? messages.length : 0
+    });
 
     // OpenAI APIへのリクエスト
     const openaiResponse = await fetch(apiUrl, {
@@ -71,27 +76,38 @@ export default async function handler(req, res) {
     // レスポンステキストを取得
     const responseText = await openaiResponse.text();
 
+    // 空のレスポンスチェック
+    if (!responseText) {
+      console.error('Empty response from OpenAI');
+      return res.status(502).json({ 
+        error: 'Empty response from OpenAI API'
+      });
+    }
+
     // JSONパースを試行
     let responseData;
     try {
       responseData = JSON.parse(responseText);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Response text was:', responseText);
-      return res.status(500).json({ 
+      console.error('Response text:', responseText.substring(0, 200));
+      return res.status(502).json({ 
         error: 'Invalid JSON response from OpenAI',
         details: responseText.substring(0, 500)
       });
     }
 
     // OpenAI APIのレスポンスをそのまま返す
-    res.status(openaiResponse.status).json(responseData);
+    return res.status(openaiResponse.status).json(responseData);
 
   } catch (error) {
     console.error('Proxy error:', error);
-    res.status(500).json({ 
+    console.error('Error stack:', error.stack);
+    
+    // エラーレスポンス
+    return res.status(500).json({ 
       error: 'Internal server error',
-      details: error.message
+      message: error.message || 'Unknown error occurred'
     });
   }
 }
