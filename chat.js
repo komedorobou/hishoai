@@ -1,6 +1,6 @@
 // ===================================================================
-// HishoAI Enhanced - Chat System with Multiple Modes（レイアウト変更対応版）
-// チャット機能の実装 - モード別対話システム（全幅レイアウト・サイドバー機能統合）
+// HishoAI Enhanced - Chat System with Multiple Modes（Deep Research完全版）
+// チャット機能の実装 - モード別対話システム（全幅レイアウト・Deep Research強化版）
 // ===================================================================
 
 // ===== API エンドポイント定義 =====
@@ -11,7 +11,7 @@ const RESPONSES_ENDPOINT = PROXY_ENDPOINT;
 
 // ===== o3系モデル判定関数 =====
 function isResponsesModel(model) {
-    return /^o3/.test(model);
+    return /^o3/.test(model) || /deep-research/.test(model);
 }
 
 // ===== チャットモード定義 =====
@@ -61,22 +61,84 @@ const CHAT_MODES = {
         samples: [
             { icon: '💥', text: 'SNSでバズる企画を考えて', category: 'マーケティング' },
             { icon: '🏰', text: '異世界ものの舞台設定を作って', category: '創作' },
-            { icon: '🏰', text: 'カフェの屋号案をいくつか', category: 'ビジネス' }
+            { icon: '🏪', text: 'カフェの屋号案をいくつか', category: 'ビジネス' }
         ]
     }
 };
 
-// ===== DEEP RESEARCHモード定義 =====
+// ===== DEEP RESEARCHモード定義（強化版） =====
 const DEEP_RESEARCH_MODE = {
     name: 'deep-research',
     displayName: 'DEEP RESEARCH',
     icon: '🔬',
     color: '#6B46C1',
-    description: '深層調査モード：複数の質問を通じて詳細な分析を実行します。',
+    description: '深層調査モード：AI研究者が包括的で詳細な分析を実行します。',
     temperature: 0.2,
-    maxTokens: 4000,
+    maxTokens: 100000,
     model: 'o3-deep-research-2025-06-26',
-    systemPrompt: 'あなたは深層調査専門のAIリサーチャーです。ユーザーの質問に対して、まず調査に必要な追加質問を複数行い、すべての情報を収集した後に包括的で詳細な分析結果を提供してください。学術的で客観的なアプローチを心がけ、信頼性の高い情報を基に深く掘り下げた回答を行ってください。'
+    systemPrompt: `あなたは世界最高レベルの深層調査専門のAIリサーチャーです。ユーザーの調査テーマに対して以下の構造で包括的な調査報告書を作成してください：
+
+## 📋 調査概要
+- テーマの背景と重要性
+- 調査の範囲と目的
+- 使用した情報源の概要
+
+## 🔍 現状分析
+- 現在の状況の詳細分析
+- 関連するデータ・統計・トレンド
+- 主要なステークホルダーと影響要因
+
+## ⚠️ 課題・問題点の特定
+- 特定された主要な課題
+- 問題の根本原因の分析
+- 影響範囲と深刻度の評価
+
+## 💡 解決策・改善提案
+- 短期的な対策案
+- 中長期的な戦略
+- 実装の優先順位と実現可能性
+
+## 📊 リスクと機会の分析
+- 潜在的なリスク要因
+- 機会となる要素の特定
+- リスク軽減策
+
+## 🎯 推奨アクションプラン
+- 具体的な行動計画
+- 必要なリソースと予算
+- スケジュールと成功指標
+- フォローアップ計画
+
+学術的で客観的なアプローチを心がけ、信頼性の高い情報を基に深く掘り下げた分析を行ってください。引用元は必ず明記し、データの出典を明確にしてください。`,
+    
+    // 調査テンプレート（新機能）
+    templates: {
+        business: {
+            name: 'ビジネス分析',
+            icon: '💼',
+            prompt: '市場動向、競合状況、収益モデル、成長可能性、リスク要因、投資判断のための重要指標を中心に分析してください。'
+        },
+        technology: {
+            name: '技術調査',
+            icon: '🔧',
+            prompt: '技術の現状と発展段階、主要な実装方式と課題、競合技術との比較、導入事例と成功要因、将来の技術動向予測を重点的に調査してください。'
+        },
+        academic: {
+            name: '学術研究',
+            icon: '🎓',
+            prompt: '関連する先行研究の整理、理論的フレームワーク、実証的なエビデンス、研究の限界と課題、今後の研究方向性を学術的観点から調査してください。'
+        },
+        market: {
+            name: '市場調査',
+            icon: '📈',
+            prompt: '市場規模と成長率、主要プレイヤーとシェア、顧客ニーズとトレンド、価格動向、将来予測を市場分析の観点から調査してください。'
+        },
+        problem_solving: {
+            name: '問題解決',
+            icon: '🎯',
+            prompt: '問題の根本原因分析、影響範囲と優先順位、解決策オプションの比較、実装の実現可能性、成功指標と評価方法を問題解決の観点から分析してください。'
+        }
+    }
 };
 
 // ===== グローバル変数 =====
@@ -84,6 +146,7 @@ let currentChatMode = 'chat';
 let isDeepResearchMode = false;
 let deepResearchQuestions = [];
 let deepResearchAnswers = [];
+let currentDeepResearchSession = null;
 // chatHistory は core.js で定義済みのため削除
 let chatContextByMode = {
     chat: [],
@@ -97,9 +160,16 @@ let memoryData = {
     lastSaved: null
 };
 
+// Deep Research使用量管理
+let deepResearchUsage = {
+    dailyCount: 0,
+    monthlyTokens: 0,
+    lastResetDate: new Date().toDateString()
+};
+
 // ===== チャット機能初期化 =====
 function initializeChatSection() {
-    console.log('🚀 チャット機能初期化中（全幅レイアウト対応版）...');
+    console.log('🚀 チャット機能初期化中（Deep Research完全版）...');
     
     // モードタブの初期化
     initializeChatModes();
@@ -121,10 +191,65 @@ function initializeChatSection() {
     // 記憶データの初期化
     initializeMemorySystem();
     
+    // Deep Research使用量の初期化
+    initializeDeepResearchUsage();
+    
     // 初期モードの設定
     switchChatMode('chat');
     
-    console.log('✅ チャット機能初期化完了（全幅レイアウト対応版）');
+    console.log('✅ チャット機能初期化完了（Deep Research完全版）');
+}
+
+// ===== Deep Research使用量初期化 =====
+function initializeDeepResearchUsage() {
+    try {
+        const saved = localStorage.getItem('deepResearchUsage');
+        if (saved) {
+            const data = JSON.parse(saved);
+            
+            // 日付チェック
+            const today = new Date().toDateString();
+            if (data.lastResetDate !== today) {
+                // 日が変わったらリセット
+                deepResearchUsage.dailyCount = 0;
+                deepResearchUsage.lastResetDate = today;
+            } else {
+                deepResearchUsage = { ...deepResearchUsage, ...data };
+            }
+            
+            // 月チェック
+            const currentMonth = new Date().getMonth();
+            const savedDate = new Date(data.lastResetDate || today);
+            if (savedDate.getMonth() !== currentMonth) {
+                deepResearchUsage.monthlyTokens = 0;
+            }
+        }
+    } catch (error) {
+        console.warn('Deep Research使用量データの復元に失敗:', error);
+    }
+}
+
+// ===== Deep Research使用量更新 =====
+function updateDeepResearchUsage(tokens = 0) {
+    deepResearchUsage.dailyCount++;
+    deepResearchUsage.monthlyTokens += tokens;
+    deepResearchUsage.lastResetDate = new Date().toDateString();
+    
+    localStorage.setItem('deepResearchUsage', JSON.stringify(deepResearchUsage));
+}
+
+// ===== Deep Research制限チェック =====
+function checkDeepResearchLimits() {
+    const config = window.DEEP_RESEARCH_CONFIG?.limits || {
+        maxDailyRequests: 10,
+        maxMonthlyTokens: 500000
+    };
+    
+    return {
+        canMakeRequest: deepResearchUsage.dailyCount < config.maxDailyRequests,
+        dailyRemaining: Math.max(0, config.maxDailyRequests - deepResearchUsage.dailyCount),
+        monthlyUsagePercent: (deepResearchUsage.monthlyTokens / config.maxMonthlyTokens) * 100
+    };
 }
 
 // ===== モードタブの初期化 =====
@@ -168,9 +293,24 @@ function initializeChatModes() {
 
 // ===== DEEP RESEARCHモード起動 =====
 function activateDeepResearchMode() {
+    // 制限チェック
+    const limits = checkDeepResearchLimits();
+    if (!limits.canMakeRequest) {
+        if (typeof showNotification !== 'undefined') {
+            showNotification(`⚠️ Deep Research利用制限に達しました。明日再試行してください。（本日の残り: ${limits.dailyRemaining}回）`, 'warning');
+        }
+        return;
+    }
+    
     isDeepResearchMode = true;
     deepResearchQuestions = [];
     deepResearchAnswers = [];
+    currentDeepResearchSession = {
+        startTime: new Date(),
+        topic: '',
+        template: null,
+        results: []
+    };
     
     // 全画面モーダル表示
     showDeepResearchModal();
@@ -178,8 +318,10 @@ function activateDeepResearchMode() {
     console.log('🔬 DEEP RESEARCHモード起動');
 }
 
-// ===== DEEP RESEARCH全画面モーダル表示 =====
+// ===== DEEP RESEARCH全画面モーダル表示（強化版） =====
 function showDeepResearchModal() {
+    const limits = checkDeepResearchLimits();
+    
     const modal = document.createElement('div');
     modal.className = 'deep-research-modal-overlay active';
     modal.innerHTML = `
@@ -188,8 +330,28 @@ function showDeepResearchModal() {
                 <div class="deep-research-info">
                     <h2>${DEEP_RESEARCH_MODE.icon} ${DEEP_RESEARCH_MODE.displayName}</h2>
                     <p>${DEEP_RESEARCH_MODE.description}</p>
+                    <div class="deep-research-stats">
+                        <span class="usage-info">今日の残り: ${limits.dailyRemaining}回</span>
+                        <span class="usage-info">月間使用率: ${Math.round(limits.monthlyUsagePercent)}%</span>
+                    </div>
                 </div>
                 <button class="deep-research-close" onclick="closeDeepResearchModal()">&times;</button>
+            </div>
+            
+            <div class="deep-research-templates">
+                <h3>📋 調査テンプレート</h3>
+                <div class="template-grid">
+                    ${Object.entries(DEEP_RESEARCH_MODE.templates).map(([key, template]) => `
+                        <button class="template-card" onclick="selectResearchTemplate('${key}')">
+                            <span class="template-icon">${template.icon}</span>
+                            <span class="template-name">${template.name}</span>
+                        </button>
+                    `).join('')}
+                    <button class="template-card custom" onclick="selectResearchTemplate('custom')">
+                        <span class="template-icon">✨</span>
+                        <span class="template-name">カスタム</span>
+                    </button>
+                </div>
             </div>
             
             <div class="deep-research-content">
@@ -197,11 +359,24 @@ function showDeepResearchModal() {
                     <div class="deep-research-welcome">
                         <div class="welcome-icon">${DEEP_RESEARCH_MODE.icon}</div>
                         <h3>深層調査を開始します</h3>
-                        <p>調査テーマを入力してください。詳細な分析のため、いくつか質問をさせていただきます。</p>
+                        <p>調査テーマを入力してください。上記のテンプレートを選択すると、そのカテゴリに特化した分析を実行します。</p>
+                        <div class="research-features">
+                            <div class="feature-item">🌐 Web検索連携</div>
+                            <div class="feature-item">📊 統計分析</div>
+                            <div class="feature-item">💡 解決策提案</div>
+                            <div class="feature-item">📝 構造化レポート</div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="deep-research-input-area">
+                    <div class="deep-research-progress" id="researchProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">調査準備中...</div>
+                    </div>
+                    
                     <div class="deep-research-input-wrapper">
                         <textarea id="deepResearchInput" placeholder="調査したいテーマを入力してください..." class="deep-research-input"></textarea>
                         <button id="deepResearchSendBtn" class="deep-research-send-btn" onclick="sendDeepResearchMessage()">
@@ -229,16 +404,71 @@ function showDeepResearchModal() {
     }
 }
 
+// ===== 調査テンプレート選択 =====
+function selectResearchTemplate(templateKey) {
+    const input = document.getElementById('deepResearchInput');
+    if (!input) return;
+    
+    if (templateKey === 'custom') {
+        currentDeepResearchSession.template = null;
+        input.placeholder = '調査したいテーマを入力してください...';
+    } else {
+        const template = DEEP_RESEARCH_MODE.templates[templateKey];
+        if (template) {
+            currentDeepResearchSession.template = templateKey;
+            input.placeholder = `${template.name}の観点から調査したいテーマを入力してください...`;
+            
+            if (typeof showNotification !== 'undefined') {
+                showNotification(`📋 ${template.name}テンプレートを選択しました`, 'info');
+            }
+        }
+    }
+    
+    // テンプレートカードの選択状態更新
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    const selectedCard = document.querySelector(`[onclick="selectResearchTemplate('${templateKey}')"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
+    }
+    
+    input.focus();
+}
+
 // ===== DEEP RESEARCHモーダル閉じる =====
 function closeDeepResearchModal() {
     isDeepResearchMode = false;
+    currentDeepResearchSession = null;
     const modal = document.querySelector('.deep-research-modal-overlay');
     if (modal) {
         modal.remove();
     }
 }
 
-// ===== DEEP RESEARCHメッセージ送信 =====
+// ===== 進捗表示更新 =====
+function updateResearchProgress(step, progress) {
+    const progressElement = document.getElementById('researchProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    if (progressElement && progressFill && progressText) {
+        progressElement.style.display = 'block';
+        progressFill.style.width = `${progress}%`;
+        progressText.textContent = step;
+    }
+}
+
+// ===== 進捗表示非表示 =====
+function hideResearchProgress() {
+    const progressElement = document.getElementById('researchProgress');
+    if (progressElement) {
+        progressElement.style.display = 'none';
+    }
+}
+
+// ===== DEEP RESEARCHメッセージ送信（完全版） =====
 async function sendDeepResearchMessage() {
     const input = document.getElementById('deepResearchInput');
     if (!input) return;
@@ -246,12 +476,23 @@ async function sendDeepResearchMessage() {
     const message = input.value.trim();
     if (!message) return;
     
+    // 制限チェック
+    const limits = checkDeepResearchLimits();
+    if (!limits.canMakeRequest) {
+        addDeepResearchMessage('assistant', `⚠️ **利用制限に達しました**\n\n本日のDeep Research利用回数が上限に達しました。明日再試行してください。\n\n- 本日の残り: ${limits.dailyRemaining}回\n- 月間使用率: ${Math.round(limits.monthlyUsagePercent)}%`);
+        return;
+    }
+    
     addDeepResearchMessage('user', message);
+    currentDeepResearchSession.topic = message;
     input.value = '';
     input.style.height = 'auto';
     
     const sendBtn = document.getElementById('deepResearchSendBtn');
     if (sendBtn) sendBtn.disabled = true;
+    
+    // 進捗表示開始
+    updateResearchProgress('調査準備中...', 10);
     
     // タイピングインジケーター表示
     const typingId = showDeepResearchTypingIndicator();
@@ -260,209 +501,272 @@ async function sendDeepResearchMessage() {
         const currentApiKey = ApiKeyManager.get();
         
         if (ApiKeyManager.isValid()) {
-            // DEEP RESEARCHロジック
-            if (deepResearchQuestions.length === 0) {
-                // 初回：質問生成
-                await generateDeepResearchQuestions(message, currentApiKey, typingId);
-            } else if (deepResearchAnswers.length < deepResearchQuestions.length) {
-                // 質問回答中
-                deepResearchAnswers.push(message);
-                removeDeepResearchTypingIndicator(typingId);
-                
-                if (deepResearchAnswers.length < deepResearchQuestions.length) {
-                    // 次の質問を表示
-                    addDeepResearchMessage('assistant', deepResearchQuestions[deepResearchAnswers.length]);
-                } else {
-                    // 全ての質問完了：最終分析実行
-                    await executeDeepResearchAnalysis(currentApiKey);
-                }
-            }
+            // 新しいワンショット方式でDeep Research実行
+            await executeFullDeepResearch(message, currentApiKey, typingId);
         } else {
             // APIキー未設定時のサンプル応答
             removeDeepResearchTypingIndicator(typingId);
+            hideResearchProgress();
             await simulateProcessing();
             addDeepResearchMessage('assistant', generateSampleDeepResearchResponse(message));
         }
     } catch (error) {
         removeDeepResearchTypingIndicator(typingId);
+        hideResearchProgress();
         console.error('DEEP RESEARCHエラー:', error);
-        addDeepResearchMessage('assistant', `エラーが発生しました: ${error.message}`);
+        handleDeepResearchError(error);
     } finally {
         if (sendBtn) sendBtn.disabled = false;
     }
 }
 
-// ===== DEEP RESEARCH質問生成 =====
-async function generateDeepResearchQuestions(topic, apiKey, typingId) {
-    const messages = [
-        {
-            role: 'system',
-            content: `あなたは深層調査の専門家です。与えられたテーマについて詳細な分析を行うため、重要な情報を収集する質問を3-5個生成してください。質問は具体的で、調査の精度を高めるものにしてください。
-
-出力形式：
-質問1: [質問内容]
-質問2: [質問内容]
-質問3: [質問内容]
-...`
-        },
-        {
-            role: 'user',
-            content: `調査テーマ: ${topic}\n\nこのテーマについて深層調査を行うための質問を生成してください。`
-        }
-    ];
-    
-    // APIエンドポイントをモデルに応じて切り替え
-    const url = PROXY_ENDPOINT;
-    
-    // ヘッダー
-    const headers = {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-    };
-    
-    // リクエストボディをAPIに応じて切り替え
-    const body = isResponsesModel(DEEP_RESEARCH_MODE.model) ? {
-        endpoint: 'responses',
-        model: DEEP_RESEARCH_MODE.model,
-        messages,
-        temperature: DEEP_RESEARCH_MODE.temperature
-    } : {
-        endpoint: 'chat',
-        model: DEEP_RESEARCH_MODE.model,
-        messages: messages,
-        max_tokens: DEEP_RESEARCH_MODE.maxTokens,
-        temperature: DEEP_RESEARCH_MODE.temperature
-    };
-    
-    const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body)
-    });
-    
-    removeDeepResearchTypingIndicator(typingId);
-    
-    if (!response.ok) {
-        throw new Error(ApiKeyManager.getErrorMessage(response.status));
-    }
-    
-    const data = await response.json();
-    
-    // レスポンスからAIの回答を取得（APIに応じて切り替え）
-    const questionsText = isResponsesModel(DEEP_RESEARCH_MODE.model)
-        ? (data.output_text || data.output || '').trim()
-        : (data.choices && data.choices[0] && data.choices[0].message 
-            ? data.choices[0].message.content.trim()
-            : '');
-    
-    if (questionsText) {
-        // 質問を解析して配列に格納
-        deepResearchQuestions = questionsText
-            .split('\n')
-            .filter(line => line.match(/^質問\d+:/))
-            .map(line => line.replace(/^質問\d+:\s*/, ''));
-        
-        // 最初の質問を表示
-        if (deepResearchQuestions.length > 0) {
-            addDeepResearchMessage('assistant', `詳細な分析のため、${deepResearchQuestions.length}つの質問にお答えください。\n\n**質問 1/${deepResearchQuestions.length}**\n${deepResearchQuestions[0]}`);
-        }
-    }
-}
-
-// ===== DEEP RESEARCH最終分析実行 =====
-async function executeDeepResearchAnalysis(apiKey) {
-    const typingId = showDeepResearchTypingIndicator();
-    
-    const analysisPrompt = `調査テーマと質問回答を基に、包括的な深層分析を実行してください。
-
-調査テーマ: ${deepResearchAnswers.length > 0 ? '前回の調査テーマ' : ''}
-
-質問と回答:
-${deepResearchQuestions.map((q, i) => `Q${i + 1}: ${q}\nA${i + 1}: ${deepResearchAnswers[i] || '未回答'}`).join('\n\n')}
-
-以下の観点から詳細に分析してください：
-1. 現状分析
-2. 問題点・課題の特定
-3. 原因分析
-4. 解決策・改善案
-5. 実行計画
-6. リスク要因
-7. 成功指標
-
-分析結果は構造化して、実用的で具体的な内容にしてください。`;
-    
-    const messages = [
-        {
-            role: 'system',
-            content: DEEP_RESEARCH_MODE.systemPrompt
-        },
-        {
-            role: 'user',
-            content: analysisPrompt
-        }
-    ];
-    
+// ===== 完全なDeep Research実行（改善版） =====
+async function executeFullDeepResearch(topic, apiKey, typingId) {
     try {
-        // APIエンドポイントをモデルに応じて切り替え
-        const url = PROXY_ENDPOINT;
+        updateResearchProgress('調査プロンプト作成中...', 20);
         
-        // ヘッダー
+        // テンプレート適用
+        let enhancedPrompt = topic;
+        if (currentDeepResearchSession.template) {
+            const template = DEEP_RESEARCH_MODE.templates[currentDeepResearchSession.template];
+            if (template) {
+                enhancedPrompt = `【${template.name}】調査テーマ: ${topic}\n\n${template.prompt}`;
+            }
+        }
+        
+        // Deep Research APIに最適化されたプロンプト
+        const systemMessage = `${DEEP_RESEARCH_MODE.systemPrompt}
+
+追加指示：
+- 最新の信頼性の高い情報源を重点的に活用してください
+- データや統計は具体的な数値で示してください
+- 引用元のURLや出典を明記してください
+- 実用的で実行可能な提案を心がけてください
+- 複数の視点から客観的に分析してください`;
+
+        const researchInput = [
+            {
+                role: "developer",
+                content: [
+                    {
+                        type: "input_text",
+                        text: systemMessage
+                    }
+                ]
+            },
+            {
+                role: "user",
+                content: [
+                    {
+                        type: "input_text",
+                        text: enhancedPrompt
+                    }
+                ]
+            }
+        ];
+
+        updateResearchProgress('Deep Research API実行中...', 40);
+
+        // Deep Research API呼び出し
+        const url = PROXY_ENDPOINT;
         const headers = {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
         };
-        
-        // リクエストボディをAPIに応じて切り替え
-        const body = isResponsesModel(DEEP_RESEARCH_MODE.model) ? {
+
+        const body = {
             endpoint: 'responses',
             model: DEEP_RESEARCH_MODE.model,
-            messages,
-            temperature: DEEP_RESEARCH_MODE.temperature
-        } : {
-            endpoint: 'chat',
-            model: DEEP_RESEARCH_MODE.model,
-            messages: messages,
-            max_tokens: DEEP_RESEARCH_MODE.maxTokens,
+            input: researchInput,
+            reasoning: { summary: "auto" },
+            tools: [
+                { type: "web_search_preview" }
+            ],
+            background: true, // バックグラウンド実行でタイムアウト回避
             temperature: DEEP_RESEARCH_MODE.temperature
         };
+
+        console.log('🔬 Deep Research API実行中...', {
+            model: DEEP_RESEARCH_MODE.model,
+            template: currentDeepResearchSession.template,
+            topicLength: topic.length
+        });
+        
+        updateResearchProgress('AI調査実行中... (最大30分)', 60);
         
         const response = await fetch(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(body)
         });
-        
+
+        updateResearchProgress('結果解析中...', 80);
         removeDeepResearchTypingIndicator(typingId);
-        
+
         if (!response.ok) {
+            const errorData = await response.text();
+            console.error('Deep Research API Error:', errorData);
             throw new Error(ApiKeyManager.getErrorMessage(response.status));
         }
-        
+
         const data = await response.json();
+        console.log('✅ Deep Research API応答受信');
+
+        updateResearchProgress('レポート生成中...', 90);
+
+        // レスポンス解析（改善版）
+        let researchResult = '';
+        let intermediateSteps = [];
+        let usageStats = null;
         
-        // レスポンスからAIの回答を取得（APIに応じて切り替え）
-        const analysisResult = isResponsesModel(DEEP_RESEARCH_MODE.model)
-            ? (data.output_text || data.output || '分析結果の取得に失敗しました').trim()
-            : (data.choices && data.choices[0] && data.choices[0].message 
-                ? data.choices[0].message.content.trim()
-                : '分析結果の取得に失敗しました');
-        
-        if (analysisResult && analysisResult !== '分析結果の取得に失敗しました') {
-            addDeepResearchMessage('assistant', `## 🔬 深層分析結果\n\n${analysisResult}\n\n---\n\n✅ **分析完了** - 新しい調査を開始する場合は、再度テーマを入力してください。`);
+        if (data.output && Array.isArray(data.output)) {
+            // 中間ステップの抽出
+            intermediateSteps = extractIntermediateSteps(data);
             
-            // 分析完了後の初期化
-            deepResearchQuestions = [];
-            deepResearchAnswers = [];
-        } else {
-            throw new Error('分析結果の取得に失敗しました');
+            // 最終出力を取得
+            const finalOutput = data.output[data.output.length - 1];
+            if (finalOutput && finalOutput.content && finalOutput.content[0]) {
+                researchResult = finalOutput.content[0].text || '';
+            }
+        } else if (data.output_text) {
+            // 旧形式の場合
+            researchResult = data.output_text;
+        } else if (data.choices && data.choices[0]) {
+            // Chat Completions形式の場合（フォールバック）
+            researchResult = data.choices[0].message.content;
         }
+
+        // 使用量統計の取得
+        if (data.usage) {
+            usageStats = data.usage;
+            updateDeepResearchUsage(data.usage.total_tokens || 0);
+        }
+
+        updateResearchProgress('完了', 100);
+        
+        if (researchResult) {
+            // セッション結果の保存
+            currentDeepResearchSession.results.push({
+                topic: topic,
+                template: currentDeepResearchSession.template,
+                result: researchResult,
+                steps: intermediateSteps,
+                usage: usageStats,
+                timestamp: new Date()
+            });
+            
+            // 中間ステップの表示（オプション）
+            if (intermediateSteps && intermediateSteps.length > 0 && window.DEEP_RESEARCH_CONFIG?.ui?.showIntermediateResults) {
+                addDeepResearchMessage('assistant', `## 🔄 調査プロセス\n\n${intermediateSteps.join('\n\n')}\n\n---\n\n`);
+            }
+
+            // 最終結果の表示
+            const templateInfo = currentDeepResearchSession.template ? 
+                ` (${DEEP_RESEARCH_MODE.templates[currentDeepResearchSession.template].name}分析)` : '';
+            
+            addDeepResearchMessage('assistant', `## 🔬 Deep Research 調査報告書${templateInfo}\n\n${researchResult}\n\n---\n\n✅ **調査完了** - 新しい調査を開始する場合は、再度テーマを入力してください。`);
+            
+            // 統計情報の表示
+            if (usageStats && window.DEEP_RESEARCH_CONFIG?.ui?.showUsageStats) {
+                const statsText = formatUsageStats(usageStats);
+                addDeepResearchMessage('assistant', `### 📊 調査統計\n${statsText}`);
+            }
+            
+            // 調査完了の通知
+            if (typeof showNotification !== 'undefined') {
+                const limits = checkDeepResearchLimits();
+                showNotification(`🔬 Deep Research調査完了！残り${limits.dailyRemaining}回`, 'success');
+            }
+            
+        } else {
+            throw new Error('調査結果の取得に失敗しました');
+        }
+
     } catch (error) {
         removeDeepResearchTypingIndicator(typingId);
+        hideResearchProgress();
         throw error;
+    } finally {
+        hideResearchProgress();
     }
 }
 
-// ===== DEEP RESEARCHメッセージ追加 =====
+// ===== 中間ステップの抽出（改善版） =====
+function extractIntermediateSteps(apiResponse) {
+    const steps = [];
+    
+    if (apiResponse.output && Array.isArray(apiResponse.output)) {
+        apiResponse.output.forEach((step, index) => {
+            if (step.type === 'reasoning' || step.type === 'search' || step.type === 'tool_call') {
+                const content = step.content?.[0]?.text || step.text || step.message || '';
+                if (content && index < apiResponse.output.length - 1) { // 最終結果以外
+                    const stepTitle = step.type === 'search' ? '🔍 Web検索' : 
+                                    step.type === 'reasoning' ? '🧠 分析中' : 
+                                    step.type === 'tool_call' ? '🛠️ ツール実行' : '📝 処理中';
+                    steps.push(`**${stepTitle} (ステップ ${index + 1}):** ${content.substring(0, 200)}...`);
+                }
+            }
+        });
+    }
+    
+    return steps;
+}
+
+// ===== 使用統計のフォーマット（改善版） =====
+function formatUsageStats(usage) {
+    const stats = [];
+    
+    if (usage.prompt_tokens) {
+        stats.push(`📥 入力: ${usage.prompt_tokens.toLocaleString()}トークン`);
+    }
+    
+    if (usage.completion_tokens) {
+        stats.push(`📤 出力: ${usage.completion_tokens.toLocaleString()}トークン`);
+    }
+    
+    if (usage.total_tokens) {
+        stats.push(`📊 合計: ${usage.total_tokens.toLocaleString()}トークン`);
+    }
+    
+    if (usage.total_time) {
+        const seconds = Math.round(usage.total_time / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        const timeStr = minutes > 0 ? `${minutes}分${remainingSeconds}秒` : `${seconds}秒`;
+        stats.push(`⏱️ 処理時間: ${timeStr}`);
+    }
+    
+    // 推定コスト（概算）
+    if (usage.total_tokens) {
+        const estimatedCost = (usage.total_tokens * 0.03 / 1000).toFixed(3); // 概算
+        stats.push(`💰 推定コスト: ~$${estimatedCost}`);
+    }
+    
+    return stats.join(' | ');
+}
+
+// ===== エラーハンドリング改善版 =====
+function handleDeepResearchError(error) {
+    let errorMessage = '🚨 **Deep Research エラー**\n\n';
+    
+    if (error.message.includes('timeout')) {
+        errorMessage += '⏰ **タイムアウトエラー**\nDeep Research処理がタイムアウトしました。\n\n**解決策:**\n- より簡潔で具体的なテーマで再試行\n- 調査範囲を絞り込んで再実行\n- 時間をおいて再試行';
+    } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+        errorMessage += '🚦 **利用制限エラー**\nAPI利用制限に達しました。\n\n**解決策:**\n- しばらく時間をおいて再試行\n- 明日再度実行\n- より効率的なクエリで実行';
+    } else if (error.message.includes('invalid request') || error.message.includes('400')) {
+        errorMessage += '❌ **リクエストエラー**\nリクエストが無効です。\n\n**解決策:**\n- テーマの内容を確認\n- より明確で具体的な質問に変更\n- 特殊文字や過度に長いテキストを避ける';
+    } else if (error.message.includes('401') || error.message.includes('APIキー')) {
+        errorMessage += '🔑 **認証エラー**\nAPIキーに問題があります。\n\n**解決策:**\n- 左メニューの「API設定」でキーを確認\n- 有効なOpenAI APIキーを設定\n- キーの権限を確認';
+    } else {
+        errorMessage += `❗ **予期しないエラー**\n${error.message}\n\n**解決策:**\n- ネットワーク接続を確認\n- しばらく時間をおいて再試行\n- 問題が続く場合は管理者に連絡`;
+    }
+    
+    errorMessage += '\n\n---\n\n💡 **ヒント:** 単純で明確な調査テーマから始めることをお勧めします。';
+    
+    addDeepResearchMessage('assistant', errorMessage);
+}
+
+// ===== DEEP RESEARCHメッセージ追加（改善版） =====
 function addDeepResearchMessage(role, content) {
     const messagesContainer = document.getElementById('deepResearchMessages');
     if (!messagesContainer) return;
@@ -476,12 +780,17 @@ function addDeepResearchMessage(role, content) {
     messageDiv.className = `deep-research-message ${role}`;
     
     const avatarIcon = role === 'user' ? '👤' : DEEP_RESEARCH_MODE.icon;
+    const timestamp = new Date().toLocaleTimeString();
     
     messageDiv.innerHTML = `
         <div class="message-avatar ${role}-avatar">
             ${avatarIcon}
         </div>
         <div class="message-content">
+            <div class="message-header">
+                <span class="message-role">${role === 'user' ? 'あなた' : 'Deep Research AI'}</span>
+                <span class="message-timestamp">${timestamp}</span>
+            </div>
             <div class="message-bubble">
                 ${formatMessageContent(content)}
             </div>
@@ -489,15 +798,60 @@ function addDeepResearchMessage(role, content) {
                 <button class="message-action-btn" onclick="copyMessage(this)" title="コピー">
                     📋
                 </button>
-                ${role === 'assistant' ? `<button class="message-action-btn memory-btn" onclick="saveToMemory(this)" title="記憶させる">
-                    🧠
-                </button>` : ''}
+                ${role === 'assistant' ? `
+                    <button class="message-action-btn memory-btn" onclick="saveToMemory(this)" title="記憶させる">
+                        🧠
+                    </button>
+                    <button class="message-action-btn export-btn" onclick="exportResearchResult(this)" title="エクスポート">
+                        📥
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;
     
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// ===== Deep Research結果のエクスポート =====
+function exportResearchResult(button) {
+    const messageElement = button.closest('.deep-research-message');
+    if (!messageElement) return;
+    
+    const messageContent = messageElement.querySelector('.message-bubble');
+    const text = messageContent.textContent || messageContent.innerText;
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    const exportData = {
+        title: `Deep Research Report - ${timestamp}`,
+        session: currentDeepResearchSession,
+        content: text,
+        timestamp: new Date().toISOString(),
+        usage: deepResearchUsage
+    };
+    
+    const jsonData = JSON.stringify(exportData, null, 2);
+    const filename = `deep-research-${currentDeepResearchSession?.topic?.substring(0, 20) || 'report'}-${timestamp}.json`;
+    
+    if (typeof downloadFile !== 'undefined') {
+        downloadFile(jsonData, filename, 'application/json');
+    } else {
+        // フォールバック：ブラウザダウンロード
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    if (typeof showNotification !== 'undefined') {
+        showNotification('📥 Deep Research結果をエクスポートしました', 'success');
+    }
 }
 
 // ===== DEEP RESEARCHタイピングインジケーター =====
@@ -519,6 +873,7 @@ function showDeepResearchTypingIndicator() {
                     <span></span>
                     <span></span>
                 </div>
+                <div class="typing-text">深層調査実行中...</div>
             </div>
         </div>
     `;
@@ -565,7 +920,8 @@ function saveToMemory(button) {
         content: text,
         timestamp: timestamp,
         mode: isDeepResearchMode ? 'deep-research' : currentChatMode,
-        source: isDeepResearchMode ? 'DEEP RESEARCH' : CHAT_MODES[currentChatMode].displayName
+        source: isDeepResearchMode ? 'DEEP RESEARCH' : CHAT_MODES[currentChatMode].displayName,
+        session: isDeepResearchMode ? currentDeepResearchSession?.topic : null
     };
     
     memoryData.memories.push(memoryItem);
@@ -615,7 +971,7 @@ function saveMemoryDataToJson() {
     }
 }
 
-// ===== 記憶データ表示 =====
+// ===== 記憶データ表示（改善版） =====
 function showMemoryData() {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';
@@ -628,19 +984,36 @@ function showMemoryData() {
             
             <div class="memory-content">
                 <div class="memory-stats">
-                    <p><strong>保存件数:</strong> ${memoryData.memories.length}件</p>
-                    <p><strong>最終保存:</strong> ${memoryData.lastSaved ? new Date(memoryData.lastSaved).toLocaleString() : '未保存'}</p>
+                    <div class="stat-item">
+                        <span class="stat-number">${memoryData.memories.length}</span>
+                        <span class="stat-label">保存件数</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${memoryData.memories.filter(m => m.mode === 'deep-research').length}</span>
+                        <span class="stat-label">Deep Research</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${memoryData.memories.filter(m => m.mode !== 'deep-research').length}</span>
+                        <span class="stat-label">チャット</span>
+                    </div>
+                </div>
+                
+                <div class="memory-filters">
+                    <button class="filter-btn active" onclick="filterMemories('all')">すべて</button>
+                    <button class="filter-btn" onclick="filterMemories('deep-research')">Deep Research</button>
+                    <button class="filter-btn" onclick="filterMemories('chat')">チャット</button>
                 </div>
                 
                 <div class="memory-list">
                     ${memoryData.memories.length === 0 ? 
                         '<p class="empty-memory">まだ記憶データがありません</p>' :
-                        memoryData.memories.slice(-10).reverse().map(memory => `
-                            <div class="memory-item">
+                        memoryData.memories.slice(-20).reverse().map(memory => `
+                            <div class="memory-item" data-mode="${memory.mode}">
                                 <div class="memory-header">
                                     <span class="memory-source">${memory.source}</span>
                                     <span class="memory-time">${new Date(memory.timestamp).toLocaleString()}</span>
                                 </div>
+                                ${memory.session ? `<div class="memory-session">セッション: ${memory.session}</div>` : ''}
                                 <div class="memory-content">${memory.content.substring(0, 200)}${memory.content.length > 200 ? '...' : ''}</div>
                             </div>
                         `).join('')
@@ -649,13 +1022,71 @@ function showMemoryData() {
             </div>
             
             <div class="modal-actions">
-                <button class="action-btn" onclick="saveMemoryDataToJson()">📥 JSONエクスポート</button>
+                <button class="action-btn" onclick="exportAllMemories()">📥 全データエクスポート</button>
+                <button class="action-btn" onclick="clearMemoryData()">🗑️ データクリア</button>
                 <button class="skip-btn" onclick="this.closest('.modal-overlay').remove()">閉じる</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
+}
+
+// ===== 記憶フィルター =====
+function filterMemories(filter) {
+    const memoryItems = document.querySelectorAll('.memory-item');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    
+    // ボタンの状態更新
+    filterBtns.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // アイテムの表示/非表示
+    memoryItems.forEach(item => {
+        const mode = item.getAttribute('data-mode');
+        if (filter === 'all') {
+            item.style.display = 'block';
+        } else if (filter === 'deep-research') {
+            item.style.display = mode === 'deep-research' ? 'block' : 'none';
+        } else if (filter === 'chat') {
+            item.style.display = mode !== 'deep-research' ? 'block' : 'none';
+        }
+    });
+}
+
+// ===== 全記憶データエクスポート =====
+function exportAllMemories() {
+    const exportData = {
+        exportDate: new Date().toISOString(),
+        version: '4.0',
+        memoryData: memoryData,
+        deepResearchUsage: deepResearchUsage
+    };
+    
+    const jsonData = JSON.stringify(exportData, null, 2);
+    const filename = `hishoai-all-memories-${new Date().toISOString().split('T')[0]}.json`;
+    
+    if (typeof downloadFile !== 'undefined') {
+        downloadFile(jsonData, filename, 'application/json');
+    }
+    
+    if (typeof showNotification !== 'undefined') {
+        showNotification('📥 全記憶データをエクスポートしました', 'success');
+    }
+}
+
+// ===== 記憶データクリア =====
+function clearMemoryData() {
+    if (confirm('すべての記憶データを削除しますか？この操作は取り消せません。')) {
+        memoryData = { memories: [], lastSaved: null };
+        localStorage.removeItem('hishoai-memory-data');
+        
+        document.querySelector('.modal-overlay').remove();
+        
+        if (typeof showNotification !== 'undefined') {
+            showNotification('🗑️ 記憶データをクリアしました', 'success');
+        }
+    }
 }
 
 // ===== チャットモード切り替え =====
@@ -774,6 +1205,8 @@ function showChatWelcome() {
     if (!messagesContainer) return;
     
     const modeConfig = CHAT_MODES[currentChatMode];
+    const limits = checkDeepResearchLimits();
+    
     messagesContainer.innerHTML = `
         <div class="chat-welcome">
             <div class="welcome-icon">${modeConfig.icon}</div>
@@ -783,9 +1216,14 @@ function showChatWelcome() {
                 💡 サンプルをクリックして会話を始めてみましょう
             </p>
             ${modeConfig.name === 'teach' ? `
-                <p style="color: #6B46C1; font-size: 0.8rem; margin-top: 1rem; padding: 0.5rem; background: rgba(107, 70, 193, 0.1); border-radius: 0.5rem;">
-                    🔬 <strong>DEEP RESEARCH:</strong> 解説タブを右クリックまたはダブルクリックで深層調査モードに切り替えできます
-                </p>
+                <div style="margin-top: 1rem; padding: 1rem; background: rgba(107, 70, 193, 0.1); border-radius: 0.5rem;">
+                    <p style="color: #6B46C1; font-size: 0.85rem; margin: 0;">
+                        🔬 <strong>DEEP RESEARCH機能:</strong> 解説タブを右クリックまたはダブルクリックで深層調査モードに切り替えできます
+                    </p>
+                    <p style="color: #6B46C1; font-size: 0.75rem; margin: 0.5rem 0 0 0;">
+                        本日の残り: ${limits.dailyRemaining}回 | 月間使用率: ${Math.round(limits.monthlyUsagePercent)}%
+                    </p>
+                </div>
             ` : ''}
         </div>
     `;
@@ -815,7 +1253,7 @@ function sendQuickMessage(message) {
     }
 }
 
-// ===== チャットメッセージ送信 =====
+// ===== チャットメッセージ送信（従来機能保持） =====
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     if (!input) return;
@@ -1226,21 +1664,31 @@ function clearAllChatHistory() {
 
 // ===== DEEP RESEARCHサンプル応答生成 =====
 function generateSampleDeepResearchResponse(message) {
-    return `## 🔬 DEEP RESEARCH - サンプル応答
+    const template = currentDeepResearchSession?.template;
+    const templateInfo = template ? ` (${DEEP_RESEARCH_MODE.templates[template].name}分析)` : '';
+    
+    return `## 🔬 DEEP RESEARCH - サンプル応答${templateInfo}
 
 **調査テーマ:** ${message}
 
-詳細な分析のため、以下の質問にお答えください：
+### 📋 調査概要
+このテーマについて包括的な深層調査を実行します。Web検索、データ分析、多角的な視点からの分析を通じて詳細なレポートを作成します。
 
-**質問 1/3**
-このテーマについて、どのような具体的な課題や問題を感じていますか？
+### 🔍 分析予定項目
+1. **現状分析** - 現在の状況と背景
+2. **課題特定** - 主要な問題点の抽出  
+3. **解決策提案** - 具体的な改善案
+4. **リスク評価** - 潜在的なリスク要因
+5. **推奨アクション** - 実行可能な行動計画
 
 ---
 
 💡 **実際のDEEP RESEARCH機能にはAPIキーの設定が必要です。**
 左メニューの「API設定」から設定してください。
 
-使用モデル: ${DEEP_RESEARCH_MODE.model}`;
+**使用モデル:** ${DEEP_RESEARCH_MODE.model}
+**調査時間:** 通常5-30分
+**本日の残り回数:** ${checkDeepResearchLimits().dailyRemaining}回`;
 }
 
 // ===== サンプルチャット応答生成 =====
@@ -1248,7 +1696,7 @@ function generateSampleChatResponse(message, mode) {
     const lowerMessage = message.toLowerCase();
     const modeConfig = CHAT_MODES[mode];
     
-    // モード別のサンプル応答
+    // モード別のサンプル応答（既存コード保持）
     switch (mode) {
         case 'chat':
             if (lowerMessage.includes('よっ') || lowerMessage.includes('こんにちは')) {
@@ -1344,7 +1792,7 @@ function generateSampleChatResponse(message, mode) {
 左メニューの「API設定」から設定してください。`;
 }
 
-// ===== チャット統計情報 =====
+// ===== チャット統計情報（改善版） =====
 function getChatStats() {
     const allMessages = [];
     Object.keys(chatContextByMode).forEach(mode => {
@@ -1362,7 +1810,8 @@ function getChatStats() {
         },
         currentMode: currentChatMode,
         averageMessageLength: allMessages.reduce((sum, msg) => sum + msg.content.length, 0) / allMessages.length || 0,
-        memoryCount: memoryData.memories.length
+        memoryCount: memoryData.memories.length,
+        deepResearchUsage: deepResearchUsage
     };
     
     return stats;
@@ -1371,6 +1820,8 @@ function getChatStats() {
 // ===== チャット統計表示（全幅レイアウト対応版） =====
 function showChatStats() {
     const stats = getChatStats();
+    const limits = checkDeepResearchLimits();
+    
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';
     modal.innerHTML = `
@@ -1418,11 +1869,32 @@ function showChatStats() {
                         <span class="mode-count">${stats.messagesByMode.idea} メッセージ</span>
                     </div>
                 </div>
+                
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Deep Research使用状況</h3>
+                <div class="deep-research-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.deepResearchUsage.dailyCount}</div>
+                        <div class="stat-label">今日の利用回数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${limits.dailyRemaining}</div>
+                        <div class="stat-label">今日の残り回数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${Math.round(limits.monthlyUsagePercent)}%</div>
+                        <div class="stat-label">月間使用率</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.deepResearchUsage.monthlyTokens.toLocaleString()}</div>
+                        <div class="stat-label">月間トークン</div>
+                    </div>
+                </div>
             </div>
             
             <div class="modal-actions">
                 <button class="action-btn" onclick="exportChatHistory()">📥 履歴をエクスポート</button>
                 <button class="action-btn" onclick="showMemoryData()">🧠 記憶データ表示</button>
+                <button class="action-btn" onclick="resetDeepResearchUsage()">🔄 使用量リセット</button>
                 <button class="skip-btn" onclick="this.closest('.modal-overlay').remove()">閉じる</button>
             </div>
         </div>
@@ -1431,13 +1903,36 @@ function showChatStats() {
     document.body.appendChild(modal);
 }
 
-// ===== チャットエクスポート機能 =====
+// ===== Deep Research使用量リセット =====
+function resetDeepResearchUsage() {
+    if (confirm('Deep Research使用量をリセットしますか？')) {
+        deepResearchUsage = {
+            dailyCount: 0,
+            monthlyTokens: 0,
+            lastResetDate: new Date().toDateString()
+        };
+        localStorage.setItem('deepResearchUsage', JSON.stringify(deepResearchUsage));
+        
+        if (typeof showNotification !== 'undefined') {
+            showNotification('🔄 Deep Research使用量をリセットしました', 'success');
+        }
+        
+        // モーダルを閉じて再表示
+        document.querySelector('.modal-overlay').remove();
+        showChatStats();
+    }
+}
+
+// ===== チャットエクスポート機能（改善版） =====
 function exportChatHistory() {
     const exportData = {
         exportDate: new Date().toISOString(),
+        version: '4.0 Deep Research Enhanced',
         currentMode: currentChatMode,
         modes: {},
-        memoryData: memoryData
+        memoryData: memoryData,
+        deepResearchUsage: deepResearchUsage,
+        deepResearchSessions: currentDeepResearchSession ? [currentDeepResearchSession] : []
     };
     
     Object.keys(CHAT_MODES).forEach(mode => {
@@ -1450,8 +1945,14 @@ function exportChatHistory() {
     });
     
     const jsonData = JSON.stringify(exportData, null, 2);
+    const filename = `hishoai-chat-history-${new Date().toISOString().split('T')[0]}.json`;
+    
     if (typeof downloadFile !== 'undefined') {
-        downloadFile(jsonData, `hishoai-chat-history-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+        downloadFile(jsonData, filename, 'application/json');
+    }
+    
+    if (typeof showNotification !== 'undefined') {
+        showNotification('📥 チャット履歴をエクスポートしました', 'success');
     }
 }
 
@@ -1493,5 +1994,11 @@ window.closeModeInfo = closeModeInfo;
 window.activateDeepResearchMode = activateDeepResearchMode;
 window.closeDeepResearchModal = closeDeepResearchModal;
 window.sendDeepResearchMessage = sendDeepResearchMessage;
+window.selectResearchTemplate = selectResearchTemplate;
 window.saveToMemory = saveToMemory;
 window.showMemoryData = showMemoryData;
+window.filterMemories = filterMemories;
+window.exportAllMemories = exportAllMemories;
+window.clearMemoryData = clearMemoryData;
+window.exportResearchResult = exportResearchResult;
+window.resetDeepResearchUsage = resetDeepResearchUsage;
