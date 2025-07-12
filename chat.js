@@ -1,5 +1,5 @@
 // ===================================================================
-// HishoAI Enhanced - Chat System with Multiple Modes（完全版）
+// HishoAI Enhanced - Chat System with Multiple Modes（レイアウト変更対応版）
 // チャット機能の実装 - モード別対話システム（全幅レイアウト・サイドバー機能統合）
 // ===================================================================
 
@@ -11,7 +11,7 @@ const RESPONSES_ENDPOINT = PROXY_ENDPOINT;
 
 // ===== o3系モデル判定関数 =====
 function isResponsesModel(model) {
-    return /^(o3|o3-deep-research|o4-mini-deep-research)/.test(model);
+    return /^o3/.test(model);
 }
 
 // ===== チャットモード定義 =====
@@ -40,7 +40,7 @@ const CHAT_MODES = {
         description: '体系的な説明や手順の解説に最適。構造化された詳細な情報を提供します。',
         temperature: 0.35,
         maxTokens: 2000,
-        model: 'o3',
+        model: 'o3-mini',  // o3からo3-miniに変更（Chat Completions API対応）
         systemPrompt: 'あなたは知識豊富で丁寧な教師のようなAIアシスタントです。質問に対して体系的で分かりやすい説明を提供してください。必要に応じて、箇条書きや番号付きリスト、見出しなどを使って情報を構造化してください。専門用語は適切に説明し、例えや図解の説明も交えて理解しやすくしてください。',
         samples: [
             { icon: '🍺', text: '二日酔いって早く治す方法ある？', category: '健康' },
@@ -75,13 +75,8 @@ const DEEP_RESEARCH_MODE = {
     description: '深層調査モード：複数の質問を通じて詳細な分析を実行します。',
     temperature: 0.2,
     maxTokens: 4000,
-    model: 'o3-deep-research',  // 正しいモデル名に修正
-    systemPrompt: 'あなたは深層調査専門のAIリサーチャーです。ユーザーの質問に対して、まず調査に必要な追加質問を複数行い、すべての情報を収集した後に包括的で詳細な分析結果を提供してください。学術的で客観的なアプローチを心がけ、信頼性の高い情報を基に深く掘り下げた回答を行ってください。',
-    // DEEP RESEARCH用の追加設定
-    reasoning: { summary: 'auto' },
-    tools: [{ type: 'web_search_preview' }],
-    text: {},  // paste.txtによると必要
-    store: false  // 保存設定
+    model: 'o3-deep-research-2025-06-26',
+    systemPrompt: 'あなたは深層調査専門のAIリサーチャーです。ユーザーの質問に対して、まず調査に必要な追加質問を複数行い、すべての情報を収集した後に包括的で詳細な分析結果を提供してください。学術的で客観的なアプローチを心がけ、信頼性の高い情報を基に深く掘り下げた回答を行ってください。'
 };
 
 // ===== グローバル変数 =====
@@ -89,7 +84,6 @@ let currentChatMode = 'chat';
 let isDeepResearchMode = false;
 let deepResearchQuestions = [];
 let deepResearchAnswers = [];
-let deepResearchTopic = '';
 // chatHistory は core.js で定義済みのため削除
 let chatContextByMode = {
     chat: [],
@@ -177,7 +171,6 @@ function activateDeepResearchMode() {
     isDeepResearchMode = true;
     deepResearchQuestions = [];
     deepResearchAnswers = [];
-    deepResearchTopic = '';
     
     // 全画面モーダル表示
     showDeepResearchModal();
@@ -204,7 +197,7 @@ function showDeepResearchModal() {
                     <div class="deep-research-welcome">
                         <div class="welcome-icon">${DEEP_RESEARCH_MODE.icon}</div>
                         <h3>深層調査を開始します</h3>
-                        <p>調査したいテーマを入力してください。詳細な分析のため、いくつか質問をさせていただきます。</p>
+                        <p>調査テーマを入力してください。詳細な分析のため、いくつか質問をさせていただきます。</p>
                     </div>
                 </div>
                 
@@ -269,8 +262,7 @@ async function sendDeepResearchMessage() {
         if (ApiKeyManager.isValid()) {
             // DEEP RESEARCHロジック
             if (deepResearchQuestions.length === 0) {
-                // 初回：調査テーマを保存して質問生成
-                deepResearchTopic = message;
+                // 初回：質問生成
                 await generateDeepResearchQuestions(message, currentApiKey, typingId);
             } else if (deepResearchAnswers.length < deepResearchQuestions.length) {
                 // 質問回答中
@@ -279,19 +271,11 @@ async function sendDeepResearchMessage() {
                 
                 if (deepResearchAnswers.length < deepResearchQuestions.length) {
                     // 次の質問を表示
-                    const nextQuestionIndex = deepResearchAnswers.length;
-                    addDeepResearchMessage('assistant', `**質問 ${nextQuestionIndex + 1}/${deepResearchQuestions.length}**\n${deepResearchQuestions[nextQuestionIndex]}`);
+                    addDeepResearchMessage('assistant', deepResearchQuestions[deepResearchAnswers.length]);
                 } else {
                     // 全ての質問完了：最終分析実行
-                    const newTypingId = showDeepResearchTypingIndicator();
-                    await executeDeepResearchAnalysis(currentApiKey, newTypingId);
+                    await executeDeepResearchAnalysis(currentApiKey);
                 }
-            } else {
-                // 新しい調査を開始
-                deepResearchQuestions = [];
-                deepResearchAnswers = [];
-                deepResearchTopic = message;
-                await generateDeepResearchQuestions(message, currentApiKey, typingId);
             }
         } else {
             // APIキー未設定時のサンプル応答
@@ -337,92 +321,61 @@ async function generateDeepResearchQuestions(topic, apiKey, typingId) {
     };
     
     // リクエストボディをAPIに応じて切り替え
-    const body = {
+    const body = isResponsesModel(DEEP_RESEARCH_MODE.model) ? {
         endpoint: 'responses',
         model: DEEP_RESEARCH_MODE.model,
-        input: messages.map(msg => ({
-            role: msg.role,
-            content: [{ type: 'input_text', text: msg.content }]
-        })),
-        reasoning: DEEP_RESEARCH_MODE.reasoning,
-        tools: DEEP_RESEARCH_MODE.tools,
-        text: DEEP_RESEARCH_MODE.text,
-        store: DEEP_RESEARCH_MODE.store,
+        messages,
+        temperature: DEEP_RESEARCH_MODE.temperature
+    } : {
+        endpoint: 'chat',
+        model: DEEP_RESEARCH_MODE.model,
+        messages: messages,
+        max_tokens: DEEP_RESEARCH_MODE.maxTokens,
         temperature: DEEP_RESEARCH_MODE.temperature
     };
     
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body)
-        });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    });
+    
+    removeDeepResearchTypingIndicator(typingId);
+    
+    if (!response.ok) {
+        throw new Error(ApiKeyManager.getErrorMessage(response.status));
+    }
+    
+    const data = await response.json();
+    
+    // レスポンスからAIの回答を取得（APIに応じて切り替え）
+    const questionsText = isResponsesModel(DEEP_RESEARCH_MODE.model)
+        ? (data.output_text || data.output || '').trim()
+        : (data.choices && data.choices[0] && data.choices[0].message 
+            ? data.choices[0].message.content.trim()
+            : '');
+    
+    if (questionsText) {
+        // 質問を解析して配列に格納
+        deepResearchQuestions = questionsText
+            .split('\n')
+            .filter(line => line.match(/^質問\d+:/))
+            .map(line => line.replace(/^質問\d+:\s*/, ''));
         
-        removeDeepResearchTypingIndicator(typingId);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('API Error:', errorData);
-            throw new Error(ApiKeyManager.getErrorMessage(response.status));
+        // 最初の質問を表示
+        if (deepResearchQuestions.length > 0) {
+            addDeepResearchMessage('assistant', `詳細な分析のため、${deepResearchQuestions.length}つの質問にお答えください。\n\n**質問 1/${deepResearchQuestions.length}**\n${deepResearchQuestions[0]}`);
         }
-        
-        const data = await response.json();
-        console.log('DEEP RESEARCH Questions Response:', data);
-        
-        // レスポンスからAIの回答を取得（APIに応じて切り替え）
-        let questionsText = '';
-        
-        if (data.output_text) {
-            questionsText = data.output_text;
-        } else if (data.output && Array.isArray(data.output)) {
-            // outputから最後のメッセージを取得
-            const lastOutput = data.output[data.output.length - 1];
-            if (lastOutput && lastOutput.content && Array.isArray(lastOutput.content)) {
-                const textContent = lastOutput.content.find(c => c.type === 'text' || c.text);
-                if (textContent && textContent.text) {
-                    questionsText = textContent.text;
-                }
-            }
-        } else if (data.choices && data.choices[0] && data.choices[0].message) {
-            questionsText = data.choices[0].message.content;
-        }
-        
-        if (questionsText) {
-            // 質問を解析して配列に格納
-            deepResearchQuestions = questionsText
-                .split('\n')
-                .filter(line => line.match(/^質問\d+:/))
-                .map(line => line.replace(/^質問\d+:\s*/, '').trim());
-            
-            if (deepResearchQuestions.length === 0) {
-                // フォールバック: 質問フォーマットが異なる場合
-                deepResearchQuestions = questionsText
-                    .split('\n')
-                    .filter(line => line.trim() && !line.includes('調査テーマ'))
-                    .map(line => line.replace(/^\d+\.\s*/, '').trim())
-                    .filter(q => q.length > 10);
-            }
-            
-            // 最初の質問を表示
-            if (deepResearchQuestions.length > 0) {
-                addDeepResearchMessage('assistant', `詳細な分析のため、${deepResearchQuestions.length}つの質問にお答えください。\n\n**質問 1/${deepResearchQuestions.length}**\n${deepResearchQuestions[0]}`);
-            } else {
-                throw new Error('質問の生成に失敗しました');
-            }
-        } else {
-            throw new Error('質問の取得に失敗しました');
-        }
-    } catch (error) {
-        removeDeepResearchTypingIndicator(typingId);
-        throw error;
     }
 }
 
 // ===== DEEP RESEARCH最終分析実行 =====
-async function executeDeepResearchAnalysis(apiKey, typingId) {
+async function executeDeepResearchAnalysis(apiKey) {
+    const typingId = showDeepResearchTypingIndicator();
+    
     const analysisPrompt = `調査テーマと質問回答を基に、包括的な深層分析を実行してください。
 
-調査テーマ: ${deepResearchTopic}
+調査テーマ: ${deepResearchAnswers.length > 0 ? '前回の調査テーマ' : ''}
 
 質問と回答:
 ${deepResearchQuestions.map((q, i) => `Q${i + 1}: ${q}\nA${i + 1}: ${deepResearchAnswers[i] || '未回答'}`).join('\n\n')}
@@ -460,17 +413,16 @@ ${deepResearchQuestions.map((q, i) => `Q${i + 1}: ${q}\nA${i + 1}: ${deepResearc
         };
         
         // リクエストボディをAPIに応じて切り替え
-        const body = {
+        const body = isResponsesModel(DEEP_RESEARCH_MODE.model) ? {
             endpoint: 'responses',
             model: DEEP_RESEARCH_MODE.model,
-            input: messages.map(msg => ({
-                role: msg.role,
-                content: [{ type: 'input_text', text: msg.content }]
-            })),
-            reasoning: DEEP_RESEARCH_MODE.reasoning,
-            tools: DEEP_RESEARCH_MODE.tools,
-            text: DEEP_RESEARCH_MODE.text,
-            store: DEEP_RESEARCH_MODE.store,
+            messages,
+            temperature: DEEP_RESEARCH_MODE.temperature
+        } : {
+            endpoint: 'chat',
+            model: DEEP_RESEARCH_MODE.model,
+            messages: messages,
+            max_tokens: DEEP_RESEARCH_MODE.maxTokens,
             temperature: DEEP_RESEARCH_MODE.temperature
         };
         
@@ -483,39 +435,24 @@ ${deepResearchQuestions.map((q, i) => `Q${i + 1}: ${q}\nA${i + 1}: ${deepResearc
         removeDeepResearchTypingIndicator(typingId);
         
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('API Error:', errorData);
             throw new Error(ApiKeyManager.getErrorMessage(response.status));
         }
         
         const data = await response.json();
-        console.log('DEEP RESEARCH Analysis Response:', data);
         
         // レスポンスからAIの回答を取得（APIに応じて切り替え）
-        let analysisResult = '';
+        const analysisResult = isResponsesModel(DEEP_RESEARCH_MODE.model)
+            ? (data.output_text || data.output || '分析結果の取得に失敗しました').trim()
+            : (data.choices && data.choices[0] && data.choices[0].message 
+                ? data.choices[0].message.content.trim()
+                : '分析結果の取得に失敗しました');
         
-        if (data.output_text) {
-            analysisResult = data.output_text;
-        } else if (data.output && Array.isArray(data.output)) {
-            // outputから最後のメッセージを取得
-            const lastOutput = data.output[data.output.length - 1];
-            if (lastOutput && lastOutput.content && Array.isArray(lastOutput.content)) {
-                const textContent = lastOutput.content.find(c => c.type === 'text' || c.text);
-                if (textContent && textContent.text) {
-                    analysisResult = textContent.text;
-                }
-            }
-        } else if (data.choices && data.choices[0] && data.choices[0].message) {
-            analysisResult = data.choices[0].message.content;
-        }
-        
-        if (analysisResult) {
+        if (analysisResult && analysisResult !== '分析結果の取得に失敗しました') {
             addDeepResearchMessage('assistant', `## 🔬 深層分析結果\n\n${analysisResult}\n\n---\n\n✅ **分析完了** - 新しい調査を開始する場合は、再度テーマを入力してください。`);
             
             // 分析完了後の初期化
             deepResearchQuestions = [];
             deepResearchAnswers = [];
-            deepResearchTopic = '';
         } else {
             throw new Error('分析結果の取得に失敗しました');
         }
@@ -941,12 +878,7 @@ async function sendChatMessage() {
             const body = isResponsesModel(modeConfig.model) ? {
                 endpoint: 'responses',
                 model: modeConfig.model,
-                input: messages.map(msg => ({
-                    role: msg.role,
-                    content: [{ type: 'input_text', text: msg.content }]
-                })),
-                text: {},  // o3系モデルに必要
-                store: false,
+                messages,
                 temperature: modeConfig.temperature
             } : {
                 endpoint: 'chat',
@@ -977,33 +909,16 @@ async function sendChatMessage() {
             }
 
             const data = await response.json();
-            console.log(`✅ ${modeConfig.model} API応答受信:`, data);
+            console.log(`✅ ${modeConfig.model} API応答受信`);
             
             // レスポンスからAIの回答を取得（APIに応じて切り替え）
-            let aiResponse = '';
+            const aiResponse = isResponsesModel(modeConfig.model) 
+                ? (data.output_text || data.output || '応答の取得に失敗しました').trim()
+                : (data.choices && data.choices[0] && data.choices[0].message 
+                    ? data.choices[0].message.content.trim() 
+                    : '応答の取得に失敗しました');
             
-            if (isResponsesModel(modeConfig.model)) {
-                // o3系モデルのレスポンス処理
-                if (data.output_text) {
-                    aiResponse = data.output_text;
-                } else if (data.output && Array.isArray(data.output)) {
-                    // outputから最後のメッセージを取得
-                    const lastOutput = data.output[data.output.length - 1];
-                    if (lastOutput && lastOutput.content && Array.isArray(lastOutput.content)) {
-                        const textContent = lastOutput.content.find(c => c.type === 'text' || c.text);
-                        if (textContent && textContent.text) {
-                            aiResponse = textContent.text;
-                        }
-                    }
-                }
-            } else {
-                // 通常のChat Completions APIのレスポンス処理
-                if (data.choices && data.choices[0] && data.choices[0].message) {
-                    aiResponse = data.choices[0].message.content.trim();
-                }
-            }
-            
-            if (aiResponse) {
+            if (aiResponse && aiResponse !== '応答の取得に失敗しました') {
                 // AIの応答を表示
                 addMessageToChat('assistant', aiResponse);
                 
@@ -1030,7 +945,7 @@ async function sendChatMessage() {
                     });
                 }
             } else {
-                throw new Error('応答の取得に失敗しました');
+                throw new Error('予期しないレスポンス形式です');
             }
             
         } else {
@@ -1323,10 +1238,6 @@ function generateSampleDeepResearchResponse(message) {
 ---
 
 💡 **実際のDEEP RESEARCH機能にはAPIキーの設定が必要です。**
-左メニューの「API設定」から設定してください。
-
-使用モデル: ${DEEP_RESEARCH_MODE.model}`;
-}。**
 左メニューの「API設定」から設定してください。
 
 使用モデル: ${DEEP_RESEARCH_MODE.model}`;
