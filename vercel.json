@@ -5,10 +5,7 @@
   "builds": [
     { 
       "src": "api/openai-proxy.js", 
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/node"
     }
   ],
   "headers": [
@@ -51,10 +48,6 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
     }
@@ -81,25 +74,11 @@
     }
   ],
   "functions": {
-    "api/*.js": {
-      "maxDuration": 1800,
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "environment": {
-        "NODE_ENV": "production"
-      }
+    "api/openai-proxy.js": {
+      "maxDuration": 300
     }
   },
   "regions": [
-    "iad1",
-    "sfo1"
-  ],
-  "env": {
-    "OPENAI_API_KEY": "@openai_api_key"
-  },
-  "github": {
-    "silent": true
-  },
-  "cleanUrls": true,
-  "trailingSlash": false
+    "iad1"
+  ]
 }
