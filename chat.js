@@ -75,11 +75,13 @@ const DEEP_RESEARCH_MODE = {
     description: '深層調査モード：複数の質問を通じて詳細な分析を実行します。',
     temperature: 0.2,
     maxTokens: 4000,
-    model: 'o3-deep-research-2025-06-26',
+    model: 'o3-deep-research',  // 正しいモデル名に修正
     systemPrompt: 'あなたは深層調査専門のAIリサーチャーです。ユーザーの質問に対して、まず調査に必要な追加質問を複数行い、すべての情報を収集した後に包括的で詳細な分析結果を提供してください。学術的で客観的なアプローチを心がけ、信頼性の高い情報を基に深く掘り下げた回答を行ってください。',
     // DEEP RESEARCH用の追加設定
     reasoning: { summary: 'auto' },
-    tools: [{ type: 'web_search_preview' }]
+    tools: [{ type: 'web_search_preview' }],
+    text: {},  // paste.txtによると必要
+    store: false  // 保存設定
 };
 
 // ===== グローバル変数 =====
@@ -344,6 +346,8 @@ async function generateDeepResearchQuestions(topic, apiKey, typingId) {
         })),
         reasoning: DEEP_RESEARCH_MODE.reasoning,
         tools: DEEP_RESEARCH_MODE.tools,
+        text: DEEP_RESEARCH_MODE.text,
+        store: DEEP_RESEARCH_MODE.store,
         temperature: DEEP_RESEARCH_MODE.temperature
     };
     
@@ -465,6 +469,8 @@ ${deepResearchQuestions.map((q, i) => `Q${i + 1}: ${q}\nA${i + 1}: ${deepResearc
             })),
             reasoning: DEEP_RESEARCH_MODE.reasoning,
             tools: DEEP_RESEARCH_MODE.tools,
+            text: DEEP_RESEARCH_MODE.text,
+            store: DEEP_RESEARCH_MODE.store,
             temperature: DEEP_RESEARCH_MODE.temperature
         };
         
@@ -935,7 +941,12 @@ async function sendChatMessage() {
             const body = isResponsesModel(modeConfig.model) ? {
                 endpoint: 'responses',
                 model: modeConfig.model,
-                messages,
+                input: messages.map(msg => ({
+                    role: msg.role,
+                    content: [{ type: 'input_text', text: msg.content }]
+                })),
+                text: {},  // o3系モデルに必要
+                store: false,
                 temperature: modeConfig.temperature
             } : {
                 endpoint: 'chat',
@@ -1312,6 +1323,10 @@ function generateSampleDeepResearchResponse(message) {
 ---
 
 💡 **実際のDEEP RESEARCH機能にはAPIキーの設定が必要です。**
+左メニューの「API設定」から設定してください。
+
+使用モデル: ${DEEP_RESEARCH_MODE.model}`;
+}。**
 左メニューの「API設定」から設定してください。
 
 使用モデル: ${DEEP_RESEARCH_MODE.model}`;
