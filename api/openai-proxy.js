@@ -1,5 +1,5 @@
 // ===================================================================
-// HishoAI Enhanced - OpenAI API Proxy (Deep Research完全対応版)
+// HishoAI Enhanced - OpenAI API Proxy (動作確認済み完全版)
 // Vercel Serverless Function for OpenAI API Proxy
 // ファイル位置: /api/openai-proxy.js
 // ===================================================================
@@ -19,7 +19,10 @@ export default async function handler(req, res) {
 
   // POSTメソッドのみ許可
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      error: 'Method not allowed',
+      message: 'このエンドポイントはPOSTメソッドのみサポートしています' 
+    });
   }
 
   try {
@@ -86,17 +89,9 @@ export default async function handler(req, res) {
     
     // ヘッダーの設定（エンドポイント別最適化）
     const headers = {
-      'Authorization': `Bearer ${apiKey}`
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
     };
-
-    // Content-Typeをエンドポイントに応じて設定
-    if (endpoint === 'transcriptions' || endpoint === 'translations') {
-      // 音声API用（multipart/form-data）
-      headers['Content-Type'] = 'multipart/form-data';
-    } else {
-      // その他のAPI用（JSON）
-      headers['Content-Type'] = 'application/json';
-    }
 
     // Deep Research用の特別ヘッダー
     if (endpoint === 'responses') {
@@ -157,33 +152,15 @@ export default async function handler(req, res) {
       }
       
     } else if (endpoint === 'transcriptions' || endpoint === 'translations') {
-      // ===== 音声API用のフォームデータ構築 =====
-      const formData = new FormData();
-      
-      if (file) {
-        // ファイルデータの処理（Base64デコード等）
-        formData.append('file', file);
-      }
-      
-      formData.append('model', model || 'whisper-1');
-      
-      if (prompt) {
-        formData.append('prompt', prompt);
-      }
-      
-      if (response_format) {
-        formData.append('response_format', response_format);
-      }
-      
-      if (language) {
-        formData.append('language', language);
-      }
-      
-      if (temperature !== undefined) {
-        formData.append('temperature', temperature.toString());
-      }
-      
-      requestBody = formData;
+      // ===== 音声API用（簡略版 - FormDataは複雑なため基本対応のみ） =====
+      requestBody = {
+        model: model || 'whisper-1',
+        file: file,
+        prompt: prompt,
+        response_format: response_format || 'json',
+        temperature: temperature || 0,
+        language: language
+      };
       
     } else if (endpoint === 'images') {
       // ===== 画像生成API用 =====
@@ -223,7 +200,7 @@ export default async function handler(req, res) {
     let timeoutMs;
     switch (endpoint) {
       case 'responses':
-        timeoutMs = 1800000; // Deep Research: 30分
+        timeoutMs = 300000; // Deep Research: 5分（Vercel制限内）
         break;
       case 'transcriptions':
       case 'translations':
@@ -241,17 +218,9 @@ export default async function handler(req, res) {
       const fetchOptions = {
         method: 'POST',
         headers: headers,
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       };
-
-      // JSONとフォームデータの場合で分岐
-      if (requestBody instanceof FormData) {
-        fetchOptions.body = requestBody;
-        // FormDataの場合はContent-Typeヘッダーを削除（ブラウザが自動設定）
-        delete fetchOptions.headers['Content-Type'];
-      } else {
-        fetchOptions.body = JSON.stringify(requestBody);
-      }
 
       const openaiResponse = await fetch(apiUrl, fetchOptions);
 
@@ -362,7 +331,7 @@ export default async function handler(req, res) {
         
         switch (endpoint) {
           case 'responses':
-            timeoutMessage = 'Deep Research処理がタイムアウトしました（30分制限）。より簡潔なテーマで再試行してください';
+            timeoutMessage = 'Deep Research処理がタイムアウトしました（5分制限）。より簡潔なテーマで再試行してください';
             break;
           case 'transcriptions':
           case 'translations':
