@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="translation.css">
     <link rel="stylesheet" href="correction.css">
     <link rel="stylesheet" href="transcript.css">
-    <link rel="stylesheet" href="analysis.css">
     
     <!-- ★新機能：資料調査AI専用スタイルシート -->
     <link rel="stylesheet" href="summary.css">
@@ -34,7 +33,11 @@
             </div>
             
             <nav class="nav-section">
-                <div class="nav-item active" data-tab="chat">
+                <div class="nav-item active" data-tab="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">ホーム</span>
+                </div>
+                <div class="nav-item" data-tab="chat">
                     <span class="nav-icon">💬</span>
                     <span class="nav-text">チャット</span>
                 </div>
@@ -59,21 +62,8 @@
                     <span class="nav-icon">🔍</span>
                     <span class="nav-text">資料調査AI</span>
                 </div>
-                <div class="nav-item" data-tab="analysis">
-                    <span class="nav-icon">📸</span>
-                    <span class="nav-text">スクショ解析</span>
-                </div>
                 
                 <div class="nav-divider"></div>
-                
-                <div class="nav-item" onclick="toggleHistoryPanel()">
-                    <span class="nav-icon">📋</span>
-                    <span class="nav-text">履歴</span>
-                </div>
-                <div class="nav-item" onclick="showExportMenu(event)">
-                    <span class="nav-icon">💾</span>
-                    <span class="nav-text">エクスポート</span>
-                </div>
             </nav>
             
             <div class="api-status-section">
@@ -88,7 +78,7 @@
         <main class="main-container">
             <!-- トップバー（既存機能完全保持） -->
             <header class="topbar">
-                <h1 class="page-title">チャット</h1>
+                <h1 class="page-title">ホーム</h1>
                 <div class="topbar-actions">
                     <div id="topbarActions">
                         <!-- 動的に更新される -->
@@ -99,8 +89,66 @@
             <!-- コンテンツエリア（既存機能完全保持） -->
             <div class="content-area">
                 <div class="content-wrapper">
+                    <!-- ★新規：メイン画面セクション -->
+                    <section id="homeSection" class="content-section active">
+                        <div class="home-container">
+                            <!-- API設定ボタン -->
+                            <div class="home-api-settings">
+                                <button class="api-settings-btn" onclick="showApiSettings()">
+                                    <span class="api-settings-icon">⚙️</span>
+                                    <span class="api-settings-text">API設定</span>
+                                </button>
+                            </div>
+                            
+                            <!-- メインタイトル -->
+                            <div class="home-header">
+                                <h1 class="home-title">HishoAI Enhanced</h1>
+                                <p class="home-subtitle">AI powered productivity suite</p>
+                            </div>
+                            
+                            <!-- 機能カードグリッド -->
+                            <div class="feature-cards-grid">
+                                <div class="feature-card" data-feature="chat">
+                                    <div class="feature-card-icon">💬</div>
+                                    <h3 class="feature-card-title">チャット</h3>
+                                    <p class="feature-card-desc">AIとの対話</p>
+                                </div>
+                                
+                                <div class="feature-card" data-feature="office">
+                                    <div class="feature-card-icon">💼</div>
+                                    <h3 class="feature-card-title">Office支援</h3>
+                                    <p class="feature-card-desc">Word・Excel・PowerPoint</p>
+                                </div>
+                                
+                                <div class="feature-card" data-feature="transcript">
+                                    <div class="feature-card-icon">🎵</div>
+                                    <h3 class="feature-card-title">音声文字起こし</h3>
+                                    <p class="feature-card-desc">音声をテキストに変換</p>
+                                </div>
+                                
+                                <div class="feature-card" data-feature="correction">
+                                    <div class="feature-card-icon">✏️</div>
+                                    <h3 class="feature-card-title">校正AI</h3>
+                                    <p class="feature-card-desc">テキスト校正・添削</p>
+                                </div>
+                                
+                                <div class="feature-card" data-feature="translate">
+                                    <div class="feature-card-icon">🌍</div>
+                                    <h3 class="feature-card-title">翻訳</h3>
+                                    <p class="feature-card-desc">多言語翻訳・リアルタイム</p>
+                                </div>
+                                
+                                <div class="feature-card" data-feature="summary">
+                                    <div class="feature-card-icon">🔍</div>
+                                    <h3 class="feature-card-title">資料調査AI</h3>
+                                    <p class="feature-card-desc">複数資料の分析・要約</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
                     <!-- 既存：チャットセクション -->
-                    <section id="chatSection" class="content-section active">
+                    <section id="chatSection" class="content-section">
                         <div class="chat-interface">
                             <div class="chat-main">
                                 <div class="chat-header">
@@ -404,78 +452,9 @@
                             </div>
                         </div>
                     </section>
-
-                    <!-- 既存：スクショ解析セクション -->
-                    <section id="analysisSection" class="content-section">
-                        <div class="analysis-container feature-container">
-                            <div class="feature-header">
-                                <div class="feature-title">
-                                    <div class="feature-icon-large">🔍</div>
-                                    <div>スクリーンショット解析</div>
-                                </div>
-                                <p class="feature-description">画面の問題を分析し、具体的な解決策を提案します。</p>
-                            </div>
-                            
-                            <div class="file-upload-area" id="imageDropZone">
-                                <div class="upload-icon">📸</div>
-                                <div class="upload-text">
-                                    <strong>スクリーンショット画像をドロップまたは選択</strong>
-                                    <p>PNG, JPG, JPEG, GIF, WebP形式に対応（最大20MB）</p>
-                                    <p>エラー画面、ソフトウェア画面、コード画面等を解析します</p>
-                                </div>
-                                <input type="file" id="imageFileInput" accept="image/*" class="file-input-hidden">
-                            </div>
-                            
-                            <div id="imageFileInfo" class="file-info" style="display: none;">
-                                <div class="file-details">
-                                    <div class="file-name"></div>
-                                    <div class="file-size"></div>
-                                </div>
-                                <button class="remove-file-btn" onclick="removeImageFile()">🗑️ 削除</button>
-                            </div>
-                            
-                            <div id="imagePreview" class="image-preview-area" style="display: none;">
-                                <h4>📸 プレビュー</h4>
-                                <img id="previewImage" alt="プレビュー画像">
-                            </div>
-                            
-                            <div class="button-group">
-                                <button class="btn btn-primary" id="analyzeImageBtn" onclick="analyzeImage()" disabled>
-                                    🔍 画像解析開始
-                                </button>
-                                <button class="btn btn-secondary" id="ocrBtn" onclick="extractTextFromImage()" disabled>
-                                    📝 テキスト抽出（OCR）
-                                </button>
-                                <button class="btn btn-ghost" onclick="showAnalysisSample('general')">
-                                    📄 サンプル表示
-                                </button>
-                            </div>
-                        </div>
-                    </section>
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- 既存：履歴パネル -->
-    <div class="history-panel" id="historyPanel" style="display: none;">
-        <div class="history-header">
-            <h3>📋 履歴</h3>
-            <button class="history-close-btn" onclick="toggleHistoryPanel()">×</button>
-        </div>
-        <div class="history-list" id="historyList"></div>
-    </div>
-
-    <!-- 既存：エクスポートメニュー -->
-    <div class="export-menu" id="exportMenu" style="display: none;">
-        <div class="export-option" onclick="exportResults('json')">
-            <span class="export-icon">📄</span>
-            <span>JSON形式でエクスポート</span>
-        </div>
-        <div class="export-option" onclick="exportResults('csv')">
-            <span class="export-icon">📊</span>
-            <span>CSV形式でエクスポート</span>
-        </div>
     </div>
 
     <!-- 既存：API設定モーダル -->
@@ -549,7 +528,6 @@
     <script src="transcript.js"></script>
     <script src="correction.js"></script>
     <script src="translation.js"></script>
-    <script src="analysis.js"></script>
     
     <!-- ★新機能：資料調査AI専用JavaScript -->
     <script src="summary.js"></script>
@@ -563,6 +541,9 @@
                 console.error('❌ Config not loaded properly');
                 return;
             }
+            
+            // ★デフォルトで全画面ホームモードを有効
+            document.body.classList.add('fullscreen-home');
             
             // 既存システムの初期化
             if (typeof initializeApp !== 'undefined') {
@@ -583,12 +564,30 @@
         // ★既存のswitchTab関数に資料調査AI終了処理を追加
         const originalSwitchTab = window.switchTab;
         window.switchTab = function(tabName) {
+            // ★全画面モードの制御
+            if (tabName === 'home') {
+                document.body.classList.add('fullscreen-home');
+            } else {
+                document.body.classList.remove('fullscreen-home');
+            }
+            
             // ★資料調査AIが開いている場合は終了
             if (tabName !== 'summary' && window.SummaryAI && window.SummaryAI.initialized) {
                 const summarySection = document.getElementById('summarySection');
                 if (summarySection && summarySection.querySelector('.summary-app-container')) {
                     window.SummaryAI.exitSummaryMode();
                 }
+            }
+            
+            // 全てのセクションを非表示
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // 指定されたセクションを表示
+            const targetSection = document.getElementById(tabName + 'Section');
+            if (targetSection) {
+                targetSection.classList.add('active');
             }
             
             // 既存のswitchTab処理を続行
@@ -602,6 +601,25 @@
                 item.addEventListener('click', function() {
                     const tabName = this.getAttribute('data-tab');
                     if (tabName) {
+                        // ★ホーム画面の場合は特別処理
+                        if (tabName === 'home') {
+                            document.body.classList.add('fullscreen-home');
+                            switchTab('home');
+                            document.querySelectorAll('.nav-item').forEach(nav => {
+                                nav.classList.remove('active');
+                            });
+                            this.classList.add('active');
+                            
+                            const pageTitle = document.querySelector('.page-title');
+                            if (pageTitle) {
+                                pageTitle.textContent = 'ホーム';
+                            }
+                            return;
+                        }
+                        
+                        // ★他のタブに移動時は全画面モード解除
+                        document.body.classList.remove('fullscreen-home');
+                        
                         // ★資料調査AIの場合は特別処理
                         if (tabName === 'summary') {
                             enterSummaryMode();
@@ -629,6 +647,43 @@
                         if (pageTitle) {
                             const navText = this.querySelector('.nav-text').textContent;
                             pageTitle.textContent = navText;
+                        }
+                        
+                        updateTopbarActions();
+                    }
+                });
+            });
+            
+            // ★機能カードのクリックイベント
+            document.querySelectorAll('.feature-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const feature = this.getAttribute('data-feature');
+                    if (feature) {
+                        // ★全画面モード解除
+                        document.body.classList.remove('fullscreen-home');
+                        
+                        // 対応する機能に移動
+                        if (feature === 'summary') {
+                            enterSummaryMode();
+                        } else {
+                            switchTab(feature);
+                        }
+                        
+                        // サイドバーナビゲーションも更新
+                        document.querySelectorAll('.nav-item').forEach(nav => {
+                            nav.classList.remove('active');
+                        });
+                        
+                        const targetNav = document.querySelector(`[data-tab="${feature}"]`);
+                        if (targetNav) {
+                            targetNav.classList.add('active');
+                        }
+                        
+                        // ページタイトル更新
+                        const pageTitle = document.querySelector('.page-title');
+                        if (pageTitle) {
+                            const cardTitle = this.querySelector('.feature-card-title').textContent;
+                            pageTitle.textContent = cardTitle;
                         }
                         
                         updateTopbarActions();
